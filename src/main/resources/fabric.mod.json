@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "smartview",
+  "version": "${version}",
+  "name": "SmartView",
+  "description": "",
+  "authors": [],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "icon": "assets/smartview/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "fabric-datagen": [
+      "crqzycat.smartview.client.SmartviewDataGenerator"
+    ],
+    "client": [
+      "crqzycat.smartview.client.SmartviewClient"
+    ],
+    "main": [
+      "crqzycat.smartview.Smartview"
+    ]
+  },
+  "mixins": [
+    "smartview.mixins.json",
+    {
+      "config": "smartview.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-api": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
