@@ -18,6 +18,7 @@ import org.joml.Matrix3x2fStack;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
+import java.util.Set;
 
 public class HudEditScreen extends Screen {
 
@@ -180,22 +181,35 @@ public class HudEditScreen extends Screen {
         if (btn != null) btn.setMessage(Text.literal("> ..."));
     }
 
+    // Keys that must never be bound
+    private static final Set<Integer> BLOCKED_KEYS = Set.of(
+        GLFW.GLFW_KEY_LEFT_SUPER,    // Windows / Mac Command
+        GLFW.GLFW_KEY_RIGHT_SUPER,
+        GLFW.GLFW_KEY_PRINT_SCREEN,  // Druck
+        GLFW.GLFW_KEY_PAUSE,
+        GLFW.GLFW_KEY_CAPS_LOCK,
+        GLFW.GLFW_KEY_NUM_LOCK,
+        GLFW.GLFW_KEY_SCROLL_LOCK
+    );
+
     @Override
     public boolean keyPressed(KeyInput keyInput) {
         if (listeningModule != null) {
-            KeyBinding kb = ModuleManager.getKeybind(listeningModule.getId());
-            if (kb != null) {
-                if (keyInput.key() == GLFW.GLFW_KEY_ESCAPE) {
-                    // ESC = unbind
-                    kb.setBoundKey(InputUtil.UNKNOWN_KEY);
-                } else {
-                    kb.setBoundKey(InputUtil.Type.KEYSYM.createFromCode(keyInput.key()));
+            int key = keyInput.key();
+            if (!BLOCKED_KEYS.contains(key)) {
+                KeyBinding kb = ModuleManager.getKeybind(listeningModule.getId());
+                if (kb != null) {
+                    if (key == GLFW.GLFW_KEY_ESCAPE) {
+                        kb.setBoundKey(InputUtil.UNKNOWN_KEY);
+                    } else {
+                        kb.setBoundKey(InputUtil.Type.KEYSYM.createFromCode(key));
+                    }
+                    KeyBinding.updateKeysByCode();
+                    ButtonWidget btn = keybindButtons.get(listeningModule.getId());
+                    if (btn != null) btn.setMessage(keybindLabel(listeningModule));
                 }
-                KeyBinding.updateKeysByCode();
-                // Update button label
-                ButtonWidget btn = keybindButtons.get(listeningModule.getId());
-                if (btn != null) btn.setMessage(keybindLabel(listeningModule));
             }
+            // Blocked key → just cancel listening without binding
             listeningModule = null;
             return true;
         }
@@ -259,16 +273,18 @@ public class HudEditScreen extends Screen {
             }
         }
 
-        // Listening overlay
-        if (listeningModule != null) {
-            context.fill(0, 0, this.width, this.height, 0x88000000);
-            String msg = "Press a key for  \"" + listeningModule.getDisplayName()
-                       + "\"  (ESC to unbind)";
-            context.drawCenteredTextWithShadow(this.textRenderer, msg,
-                this.width / 2, this.height / 2, 0xFFFFFFFF);
-        }
-
         super.render(context, mouseX, mouseY, delta);
+
+        // Listening overlay drawn AFTER widgets so it covers everything
+        if (listeningModule != null) {
+            context.fill(0, 0, this.width, this.height, 0xDD000000);
+            String line1 = "Press a key for  \"" + listeningModule.getDisplayName() + "\"";
+            String line2 = "ESC = unbind  |  any system key = cancel";
+            context.drawCenteredTextWithShadow(this.textRenderer, line1,
+                this.width / 2, this.height / 2 - 10, 0xFFFFFFFF);
+            context.drawCenteredTextWithShadow(this.textRenderer, line2,
+                this.width / 2, this.height / 2 + 4, 0xFFAAAAAA);
+        }
     }
 
     // ── mouse input ───────────────────────────────────────────────────────────
