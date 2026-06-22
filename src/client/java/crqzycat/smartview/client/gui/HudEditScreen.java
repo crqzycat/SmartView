@@ -23,7 +23,7 @@ import org.lwjgl.glfw.GLFW;
 public class HudEditScreen extends Screen {
 
     private static final int PANEL_WIDTH  = 160;
-    private static final int HANDLE_SIZE  = 8;   // corner handle hitbox in px
+    private static final int HANDLE_SIZE  = 5;   // corner handle hitbox in px
 
     private static final int OUTLINE_NORMAL   = 0x80FFFFFF;
     private static final int OUTLINE_HOVER    = 0xFFFFFF00;
@@ -105,11 +105,13 @@ public class HudEditScreen extends Screen {
                              :                         OUTLINE_NORMAL;
             drawOutline(context, pos.x, pos.y, sw, sh, outlineColor);
 
-            // Corner resize handles – small white squares at all 4 corners
-            drawHandle(context, pos.x,              pos.y);               // top-left
-            drawHandle(context, pos.x + sw - HANDLE_SIZE, pos.y);         // top-right
-            drawHandle(context, pos.x,              pos.y + sh - HANDLE_SIZE); // bottom-left
-            drawHandle(context, pos.x + sw - HANDLE_SIZE, pos.y + sh - HANDLE_SIZE); // bottom-right
+            // Corner resize handles – only visible when hovered or resizing
+            if (hovered || module == resizing) {
+                drawHandle(context, pos.x,                        pos.y);
+                drawHandle(context, pos.x + sw - HANDLE_SIZE,     pos.y);
+                drawHandle(context, pos.x,                        pos.y + sh - HANDLE_SIZE);
+                drawHandle(context, pos.x + sw - HANDLE_SIZE,     pos.y + sh - HANDLE_SIZE);
+            }
 
             // Hint when hovered and idle
             if (hovered && module != dragging && module != resizing) {
