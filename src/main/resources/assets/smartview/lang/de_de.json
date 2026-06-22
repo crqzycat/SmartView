@@ -1,4 +1,5 @@
 {
   "key.category.smartview.main": "SmartView",
-  "key.smartview.open_edit_screen": "HUD-Editor öffnen/schließen"
+  "key.smartview.open_edit_screen": "HUD-Editor öffnen/schließen",
+  "smartview.gui.edit_title": "Module"
 }

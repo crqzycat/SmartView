@@ -10,20 +10,22 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.CheckboxWidget;
 import net.minecraft.text.Text;
+import org.joml.Matrix3x2fStack;
 
 /**
- * Edit mode: every enabled module is drawn with an outline that can be dragged
- * to a new position, and the right-hand panel lets you toggle modules on/off.
- * Positions/toggles are written straight into ModuleManager's live config and
- * persisted on close.
+ * Edit mode overlay. Controls per hovered module:
+ *   Scroll         → resize (scale)
+ *   Shift + Scroll → background opacity
+ *   Drag           → reposition
+ *   Checkbox panel → toggle on/off
  */
 public class HudEditScreen extends Screen {
 
-    private static final int PANEL_WIDTH = 150;
-    private static final int OUTLINE_COLOR_NORMAL = 0x80FFFFFF;
-    private static final int OUTLINE_COLOR_HOVER = 0xFFFFFF00;
-    private static final int OUTLINE_COLOR_DRAGGING = 0xFF00FF66;
-    private static final int FILL_COLOR = 0x55000000;
+    private static final int PANEL_WIDTH = 160;
+    private static final int OUTLINE_NORMAL   = 0x80FFFFFF;
+    private static final int OUTLINE_HOVER    = 0xFFFFFF00;
+    private static final int OUTLINE_DRAGGING = 0xFF00FF66;
+    private static final int FILL_EDIT        = 0x33FFFFFF;
 
     private HudModule dragging;
     private int dragOffsetX;
@@ -35,72 +37,110 @@ public class HudEditScreen extends Screen {
 
     @Override
     protected void init() {
-        this.addDrawableChild(ButtonWidget.builder(Text.translatable("gui.done"), button -> this.close())
+        this.addDrawableChild(
+            ButtonWidget.builder(Text.translatable("gui.done"), btn -> this.close())
                 .dimensions(this.width / 2 - 50, this.height - 28, 100, 20)
-                .build());
+                .build()
+        );
 
-        int listY = 28;
+        int listY = 30;
         for (HudModule module : ModuleManager.getModules()) {
             ModulePosition pos = ModuleManager.getPosition(module.getId());
-            this.addDrawableChild(CheckboxWidget.builder(Text.literal(module.getDisplayName()), this.textRenderer)
-                    .pos(this.width - PANEL_WIDTH, listY)
+            this.addDrawableChild(
+                CheckboxWidget.builder(Text.literal(module.getDisplayName()), this.textRenderer)
+                    .pos(this.width - PANEL_WIDTH + 4, listY)
                     .checked(pos.enabled)
-                    .callback((checkbox, checked) -> pos.enabled = checked)
-                    .build());
+                    .callback((cb, checked) -> pos.enabled = checked)
+                    .build()
+            );
             listY += 22;
         }
     }
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        // No background/blur call here on purpose: the outer screen wrapper in 1.21.11
-        // already does one blur pass per frame, and calling it again here throws
-        // "Can only blur once per frame". We also don't want a blurred world anyway -
-        // you need a clear view to place HUD modules.
+        // No renderBackground() – would double-blur in 1.21.11 and we want to see the world.
 
+        // Panel background
+        context.fill(this.width - PANEL_WIDTH, 20, this.width, this.height - 34, 0x88000000);
+
+        // Panel title
         context.drawCenteredTextWithShadow(this.textRenderer,
-                "SmartView - Module ziehen zum Verschieben", this.width / 2, 8, 0xFFFFFFFF);
-        context.fill(this.width - PANEL_WIDTH - 6, 20, this.width, this.height - 34, 0x40000000);
+            Text.translatable("smartview.gui.edit_title"),
+            this.width - PANEL_WIDTH / 2, 8, 0xFFFFFFFF);
 
+        // Draw each enabled module with its scale applied
+        MinecraftClient client = MinecraftClient.getInstance();
         for (HudModule module : ModuleManager.getModules()) {
             ModulePosition pos = ModuleManager.getPosition(module.getId());
-            if (!pos.enabled) {
-                continue;
+            if (!pos.enabled) continue;
+
+            float scale = Math.max(0.25f, pos.scale);
+            int sw = ModuleManager.scaledWidth(module, pos, client);
+            int sh = ModuleManager.scaledHeight(module, pos);
+
+            boolean hovered = mouseX >= pos.x && mouseX < pos.x + sw
+                           && mouseY >= pos.y && mouseY < pos.y + sh;
+
+            // Draw the module content scaled
+            Matrix3x2fStack matrices = context.getMatrices();
+            matrices.pushMatrix();
+            matrices.translate(pos.x, pos.y);
+            matrices.scale(scale, scale);
+            context.fill(0, 0, module.getBaseWidth(client), module.getBaseHeight(), FILL_EDIT);
+            module.render(context, client, 0, 0, pos);
+            matrices.popMatrix();
+
+            // Outline in screen space (no matrix)
+            int outlineColor = module == dragging ? OUTLINE_DRAGGING : (hovered ? OUTLINE_HOVER : OUTLINE_NORMAL);
+            drawOutline(context, pos.x, pos.y, sw, sh, outlineColor);
+
+            // Hint text when hovered
+            if (hovered && module != dragging) {
+                context.drawTextWithShadow(this.textRenderer,
+                    "Scroll: Größe  |  Shift+Scroll: Transparenz",
+                    pos.x, pos.y + sh + 2, 0xFFAAAAAA);
             }
-            int w = module.getWidth();
-            int h = module.getHeight();
-            boolean hovered = mouseX >= pos.x && mouseX < pos.x + w && mouseY >= pos.y && mouseY < pos.y + h;
-
-            context.fill(pos.x, pos.y, pos.x + w, pos.y + h, FILL_COLOR);
-            module.render(context, MinecraftClient.getInstance(), pos.x, pos.y);
-
-            int outlineColor = module == dragging
-                    ? OUTLINE_COLOR_DRAGGING
-                    : (hovered ? OUTLINE_COLOR_HOVER : OUTLINE_COLOR_NORMAL);
-            drawOutline(context, pos.x, pos.y, w, h, outlineColor);
         }
 
         super.render(context, mouseX, mouseY, delta);
     }
 
-    /** DrawContext has no drawBorder() in 1.21.11 anymore - draw the four edges by hand. */
-    private static void drawOutline(DrawContext context, int x, int y, int width, int height, int color) {
-        context.fill(x, y, x + width, y + 1, color);
-        context.fill(x, y + height - 1, x + width, y + height, color);
-        context.fill(x, y, x + 1, y + height, color);
-        context.fill(x + width - 1, y, x + width, y + height, color);
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        for (HudModule module : ModuleManager.getModules()) {
+            ModulePosition pos = ModuleManager.getPosition(module.getId());
+            if (!pos.enabled) continue;
+            int sw = ModuleManager.scaledWidth(module, pos, client);
+            int sh = ModuleManager.scaledHeight(module, pos);
+            if (mouseX >= pos.x && mouseX < pos.x + sw && mouseY >= pos.y && mouseY < pos.y + sh) {
+                if (hasShiftDown()) {
+                    // Shift+Scroll → background opacity (step 16, clamped 0–255)
+                    pos.backgroundAlpha = Math.max(0, Math.min(255,
+                        pos.backgroundAlpha + (int)(vertical * 16)));
+                } else {
+                    // Scroll → scale (step 0.1, clamped 0.25–4.0)
+                    pos.scale = Math.max(0.25f, Math.min(4.0f,
+                        pos.scale + (float)(vertical * 0.1)));
+                }
+                return true;
+            }
+        }
+        return super.mouseScrolled(mouseX, mouseY, horizontal, vertical);
     }
 
     @Override
     public boolean mouseClicked(Click click, boolean doubled) {
         if (click.button() == 0) {
+            MinecraftClient client = MinecraftClient.getInstance();
             for (HudModule module : ModuleManager.getModules()) {
                 ModulePosition pos = ModuleManager.getPosition(module.getId());
-                if (!pos.enabled) {
-                    continue;
-                }
-                if (click.x() >= pos.x && click.x() < pos.x + module.getWidth()
-                        && click.y() >= pos.y && click.y() < pos.y + module.getHeight()) {
+                if (!pos.enabled) continue;
+                int sw = ModuleManager.scaledWidth(module, pos, client);
+                int sh = ModuleManager.scaledHeight(module, pos);
+                if (click.x() >= pos.x && click.x() < pos.x + sw
+                 && click.y() >= pos.y && click.y() < pos.y + sh) {
                     dragging = module;
                     dragOffsetX = (int) click.x() - pos.x;
                     dragOffsetY = (int) click.y() - pos.y;
@@ -115,10 +155,8 @@ public class HudEditScreen extends Screen {
     public boolean mouseDragged(Click click, double offsetX, double offsetY) {
         if (dragging != null) {
             ModulePosition pos = ModuleManager.getPosition(dragging.getId());
-            int newX = (int) click.x() - dragOffsetX;
-            int newY = (int) click.y() - dragOffsetY;
-            pos.x = Math.max(0, Math.min(newX, this.width - dragging.getWidth()));
-            pos.y = Math.max(0, Math.min(newY, this.height - dragging.getHeight()));
+            pos.x = Math.max(0, Math.min((int) click.x() - dragOffsetX, this.width  - ModuleManager.scaledWidth(dragging, pos, MinecraftClient.getInstance())));
+            pos.y = Math.max(0, Math.min((int) click.y() - dragOffsetY, this.height - ModuleManager.scaledHeight(dragging, pos)));
             return true;
         }
         return super.mouseDragged(click, offsetX, offsetY);
@@ -126,10 +164,7 @@ public class HudEditScreen extends Screen {
 
     @Override
     public boolean mouseReleased(Click click) {
-        if (click.button() == 0 && dragging != null) {
-            dragging = null;
-            return true;
-        }
+        if (click.button() == 0 && dragging != null) { dragging = null; return true; }
         return super.mouseReleased(click);
     }
 
@@ -139,8 +174,12 @@ public class HudEditScreen extends Screen {
         MinecraftClient.getInstance().setScreen(null);
     }
 
-    @Override
-    public boolean shouldPause() {
-        return false;
+    @Override public boolean shouldPause() { return false; }
+
+    private static void drawOutline(DrawContext ctx, int x, int y, int w, int h, int color) {
+        ctx.fill(x,         y,         x + w,     y + 1,     color);
+        ctx.fill(x,         y + h - 1, x + w,     y + h,     color);
+        ctx.fill(x,         y,         x + 1,     y + h,     color);
+        ctx.fill(x + w - 1, y,         x + w,     y + h,     color);
     }
 }

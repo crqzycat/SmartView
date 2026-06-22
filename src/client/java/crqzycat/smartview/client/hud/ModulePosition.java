@@ -9,8 +9,11 @@ public class ModulePosition {
     public int x;
     public int y;
     public boolean enabled;
+    /** Render scale applied via matrix transform. 1.0 = default size. */
+    public float scale;
+    /** Alpha of the module background (0 = invisible, 255 = fully opaque). */
+    public int backgroundAlpha;
 
-    // No-args constructor required for Gson deserialization.
     public ModulePosition() {
         this(0, 0, true);
     }
@@ -19,5 +22,7 @@ public class ModulePosition {
         this.x = x;
         this.y = y;
         this.enabled = enabled;
+        this.scale = 1.0f;
+        this.backgroundAlpha = 128;
     }
 }

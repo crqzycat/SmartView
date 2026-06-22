@@ -1,5 +1,6 @@
 package crqzycat.smartview.client.hud;
 
+import crqzycat.smartview.client.hud.ModulePosition;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 
@@ -9,30 +10,21 @@ import net.minecraft.client.gui.DrawContext;
  */
 public interface HudModule {
 
-    /** Stable, unique id used as the config key. Never change this once shipped. */
     String getId();
-
-    /** Human readable name shown in the edit menu. */
     String getDisplayName();
-
-    /** Default top-left position when the module is first registered. */
     int getDefaultX();
-
     int getDefaultY();
 
-    /** Bounding box used for drag handles and overlap detection in the edit screen. */
-    int getWidth();
+    /** Base width/height before scale is applied. Used for drag hit-testing. */
+    int getBaseWidth(MinecraftClient client);
+    int getBaseHeight();
 
-    int getHeight();
-
-    /** Whether this module is enabled the first time the mod runs. */
-    default boolean enabledByDefault() {
-        return true;
-    }
+    default boolean enabledByDefault() { return true; }
 
     /**
-     * Draw the module content. x/y is the top-left corner from the saved/edited position.
-     * Do not call enable/visibility checks here - ModuleManager already handles that.
+     * Draw the module. x/y is the top-left origin (already accounts for position from config).
+     * Scale and matrix transforms are handled by ModuleManager before this call,
+     * so draw as if scale=1. Use pos.backgroundAlpha for the background color.
      */
-    void render(DrawContext context, MinecraftClient client, int x, int y);
+    void render(DrawContext context, MinecraftClient client, int x, int y, ModulePosition pos);
 }
