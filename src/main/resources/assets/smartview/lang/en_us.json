@@ -2,5 +2,6 @@
   "key.category.smartview.main": "SmartView",
   "key.smartview.open_edit_screen": "Open/Close HUD Editor",
   "smartview.gui.edit_title": "Modules",
-  "smartview.gui.hint": "Drag: move  |  Corner: resize  |  Shift+Scroll: opacity"
+  "smartview.gui.hint": "Drag: move  |  Corner: resize  |  Shift+Scroll: opacity",
+  "smartview.gui.search": "Search..."
 }
