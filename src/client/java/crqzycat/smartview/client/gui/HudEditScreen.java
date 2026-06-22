@@ -287,10 +287,10 @@ public class HudEditScreen extends Screen {
         }
         if (dragging != null) {
             ModulePosition pos = ModuleManager.getPosition(dragging.getId());
-            pos.x = Math.clamp((int) click.x() - dragOffsetX, 0,
-                    this.width  - ModuleManager.scaledWidth(dragging, pos, client));
-            pos.y = Math.clamp((int) click.y() - dragOffsetY, 0,
-                    this.height - ModuleManager.scaledHeight(dragging, pos));
+            int maxX = Math.max(0, this.width  - ModuleManager.scaledWidth(dragging, pos, client));
+            int maxY = Math.max(0, this.height - ModuleManager.scaledHeight(dragging, pos));
+            pos.x = Math.clamp((int) click.x() - dragOffsetX, 0, maxX);
+            pos.y = Math.clamp((int) click.y() - dragOffsetY, 0, maxY);
             return true;
         }
         return super.mouseDragged(click, offsetX, offsetY);

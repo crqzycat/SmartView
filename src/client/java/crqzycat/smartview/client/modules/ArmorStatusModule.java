@@ -33,6 +33,14 @@ public class ArmorStatusModule implements HudModule {
     @Override
     public void render(DrawContext context, MinecraftClient client, int x, int y, ModulePosition pos) {
         if (client.player == null) return;
+
+        boolean anyArmor = false;
+        for (EquipmentSlot slot : SLOTS) {
+            if (!client.player.getEquippedStack(slot).isEmpty()) { anyArmor = true; break; }
+        }
+        // No armor equipped → render nothing (background stays invisible)
+        if (!anyArmor) return;
+
         context.fill(x, y, x + WIDTH, y + getBaseHeight(), pos.backgroundAlpha << 24);
 
         for (int i = 0; i < SLOTS.length; i++) {
