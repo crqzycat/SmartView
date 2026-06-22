@@ -59,7 +59,7 @@ public class HudEditScreen extends Screen {
         // you need a clear view to place HUD modules.
 
         context.drawCenteredTextWithShadow(this.textRenderer,
-                "SmartView - Module ziehen zum Verschieben", this.width / 2, 8, 0xFFFFFF);
+                "SmartView - Module ziehen zum Verschieben", this.width / 2, 8, 0xFFFFFFFF);
         context.fill(this.width - PANEL_WIDTH - 6, 20, this.width, this.height - 34, 0x40000000);
 
         for (HudModule module : ModuleManager.getModules()) {

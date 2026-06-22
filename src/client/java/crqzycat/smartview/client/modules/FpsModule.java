@@ -11,7 +11,7 @@ import net.minecraft.client.gui.DrawContext;
  */
 public class FpsModule implements HudModule {
 
-    private static final int TEXT_COLOR = 0xFFFFFF;
+    private static final int TEXT_COLOR = 0xFFFFFFFF;
     private static final int BACKGROUND_COLOR = 0x80000000;
     private static final int PADDING = 3;
     private static final int WIDTH = 72;
