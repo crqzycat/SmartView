@@ -1,5 +1,6 @@
 {
   "key.category.smartview.main": "SmartView",
   "key.smartview.open_edit_screen": "HUD-Editor öffnen/schließen",
-  "smartview.gui.edit_title": "Module"
+  "smartview.gui.edit_title": "Module",
+  "smartview.gui.hint": "Ziehen: verschieben  |  Ecke: Größe  |  Shift+Scroll: Transparenz"
 }
