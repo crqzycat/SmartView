@@ -1,6 +1,12 @@
 {
   "key.category.smartview.main": "SmartView",
   "key.smartview.open_edit_screen": "HUD-Editor öffnen/schließen",
+  "key.smartview.module.fps": "FPS-Anzeige umschalten",
+  "key.smartview.module.ping": "Ping umschalten",
+  "key.smartview.module.armor_status": "Rüstungsstatus umschalten",
+  "key.smartview.module.effect_status": "Effektstatus umschalten",
+  "key.smartview.module.coords": "Koordinaten umschalten",
+  "key.smartview.module.fullbright": "Fullbright umschalten",
   "smartview.gui.edit_title": "Module",
   "smartview.gui.hint": "Ziehen: verschieben  |  Ecke: Größe  |  Shift+Scroll: Transparenz",
   "smartview.gui.search": "Suchen..."

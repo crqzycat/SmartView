@@ -10,79 +10,78 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.CheckboxWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.input.KeyInput;
+import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.util.InputUtil;
 import net.minecraft.text.Text;
 import org.joml.Matrix3x2fStack;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 public class HudEditScreen extends Screen {
 
-    // ── layout constants ─────────────────────────────────────────────────────
-    private static final int PANEL_WIDTH   = 180;
-    private static final int HANDLE_SIZE   = 5;
-    private static final int TOGGLE_BTN_W  = 18;
-    private static final int TOGGLE_BTN_H  = 36;
+    private static final int PANEL_WIDTH  = 200;
+    private static final int HANDLE_SIZE  = 5;
+    private static final int TOGGLE_BTN_W = 18;
+    private static final int TOGGLE_BTN_H = 36;
+    private static final int RESET_BTN_W  = 16;
+    private static final int KB_BTN_W     = 60;
 
-    // ── colours ──────────────────────────────────────────────────────────────
     private static final int OUTLINE_NORMAL   = 0x80FFFFFF;
     private static final int OUTLINE_HOVER    = 0xFFFFFF00;
     private static final int OUTLINE_DRAGGING = 0xFF00FF66;
     private static final int OUTLINE_RESIZE   = 0xFF00CCFF;
-    private static final int HANDLE_COLOR     = 0xFFFFFFFF;
-    private static final int FILL_EDIT        = 0x33FFFFFF;
 
-    // ── sort modes ───────────────────────────────────────────────────────────
     private enum SortMode {
         AZ("A → Z"), ZA("Z → A"), ACTIVE_FIRST("Active first"), INACTIVE_FIRST("Inactive first");
-
         final String label;
-        SortMode(String label) { this.label = label; }
+        SortMode(String l) { label = l; }
         SortMode next() { return values()[(ordinal() + 1) % values().length]; }
     }
 
-    // ── state ─────────────────────────────────────────────────────────────────
-    private boolean panelVisible = true;
-    private SortMode sortMode    = SortMode.AZ;
-    private String   searchText  = "";
+    private boolean  panelVisible = true;
+    private SortMode sortMode     = SortMode.AZ;
+    private String   searchText   = "";
 
+    // Drag state
     private HudModule dragging;
     private int dragOffsetX, dragOffsetY;
+
+    // Resize state
     private HudModule resizing;
     private double resizeStartMouseX, resizeStartMouseY;
     private float  resizeStartScale;
     private int    resizeStartBaseDim;
 
-    // widgets rebuilt on init
-    private ButtonWidget      togglePanelBtn;
-    private ButtonWidget      sortBtn;
-    private TextFieldWidget   searchField;
+    // Keybind listening state
+    private HudModule listeningModule = null; // which module we're binding a key for
+    private Map<String, ButtonWidget> keybindButtons = new LinkedHashMap<>();
+
+    private ButtonWidget     togglePanelBtn;
+    private TextFieldWidget  searchField;
     private final List<CheckboxWidget> moduleCheckboxes = new ArrayList<>();
 
     public HudEditScreen() {
         super(Text.literal("SmartView"));
     }
 
-    // ── init ──────────────────────────────────────────────────────────────────
     @Override
     protected void init() {
         moduleCheckboxes.clear();
+        keybindButtons.clear();
+        listeningModule = null;
 
-        // Done button (always visible, centred at bottom)
         this.addDrawableChild(
             ButtonWidget.builder(Text.translatable("gui.done"), btn -> this.close())
                 .dimensions(this.width / 2 - 50, this.height - 28, 100, 20)
                 .build()
         );
 
-        // Panel toggle button – right edge of screen when collapsed, left edge of panel when open
         int toggleX = panelVisible ? (panelX() - TOGGLE_BTN_W) : (this.width - TOGGLE_BTN_W);
         togglePanelBtn = this.addDrawableChild(
             ButtonWidget.builder(Text.literal(panelVisible ? "»" : "«"), btn -> togglePanel())
-                .dimensions(toggleX, this.height / 2 - TOGGLE_BTN_H / 2,
-                            TOGGLE_BTN_W, TOGGLE_BTN_H)
+                .dimensions(toggleX, this.height / 2 - TOGGLE_BTN_H / 2, TOGGLE_BTN_W, TOGGLE_BTN_H)
                 .build()
         );
 
@@ -100,38 +99,37 @@ public class HudEditScreen extends Screen {
         );
         searchField.setMaxLength(64);
         searchField.setText(searchText);
-        searchField.setChangedListener(s -> { searchText = s; rebuildCheckboxes(); });
+        searchField.setChangedListener(s -> { searchText = s; rebuildModuleRows(); });
         searchField.setPlaceholder(Text.translatable("smartview.gui.search"));
         top += 20;
 
         // Sort button
-        sortBtn = this.addDrawableChild(
+        this.addDrawableChild(
             ButtonWidget.builder(Text.literal("⇅ " + sortMode.label), btn -> {
                 sortMode = sortMode.next();
                 btn.setMessage(Text.literal("⇅ " + sortMode.label));
-                rebuildCheckboxes();
+                rebuildModuleRows();
             }).dimensions(px + 4, top, PANEL_WIDTH - 8, 16).build()
         );
         top += 22;
 
-        buildCheckboxesAt(top);
+        buildModuleRows(top);
     }
 
-    private static final int RESET_BTN_W  = 16;
-
-    private void buildCheckboxesAt(int startY) {
+    private void buildModuleRows(int startY) {
         for (CheckboxWidget cb : moduleCheckboxes) this.remove(cb);
         moduleCheckboxes.clear();
+        for (ButtonWidget btn : keybindButtons.values()) this.remove(btn);
+        keybindButtons.clear();
 
-        List<HudModule> sorted = sortedFiltered();
-        int y = startY;
         int px = panelX();
+        int y  = startY;
         MinecraftClient client = MinecraftClient.getInstance();
 
-        for (HudModule module : sorted) {
+        for (HudModule module : sortedFiltered()) {
             ModulePosition pos = ModuleManager.getPosition(module.getId());
 
-            // Checkbox (slightly narrower to leave room for reset button)
+            // Checkbox
             CheckboxWidget cb = this.addDrawableChild(
                 CheckboxWidget.builder(Text.literal(module.getDisplayName()), this.textRenderer)
                     .pos(px + 4, y)
@@ -141,36 +139,79 @@ public class HudEditScreen extends Screen {
             );
             moduleCheckboxes.add(cb);
 
-            // Reset button: resets position, scale and background alpha to defaults
+            // Keybind button
+            ButtonWidget kbBtn = this.addDrawableChild(
+                ButtonWidget.builder(keybindLabel(module), btn -> startListening(module))
+                    .dimensions(px + PANEL_WIDTH - KB_BTN_W - RESET_BTN_W - 6, y, KB_BTN_W, 14)
+                    .build()
+            );
+            keybindButtons.put(module.getId(), kbBtn);
+
+            // Reset button
             this.addDrawableChild(
                 ButtonWidget.builder(Text.literal("↺"), btn -> {
                     pos.x = module.getDefaultX();
                     pos.y = module.getDefaultY();
                     pos.scale = 1.0f;
-                    pos.backgroundAlpha = 128;
-                }).dimensions(px + PANEL_WIDTH - RESET_BTN_W - 4, y, RESET_BTN_W, 16).build()
+                    pos.backgroundAlpha = 0;
+                }).dimensions(px + PANEL_WIDTH - RESET_BTN_W - 4, y, RESET_BTN_W, 14).build()
             );
 
-            y += 22;
+            y += 20;
         }
     }
 
-    private void rebuildCheckboxes() {
-        int checkboxTop = panelVisible ? (28 + 20 + 22) : 0;
-        buildCheckboxesAt(checkboxTop);
+    private void rebuildModuleRows() {
+        int rowsTop = panelVisible ? (28 + 20 + 22) : 0;
+        buildModuleRows(rowsTop);
     }
 
     private void togglePanel() {
         panelVisible = !panelVisible;
-        // Rebuild everything so widget positions update
         this.clearChildren();
         this.init();
     }
 
+    // ── keybind listening ─────────────────────────────────────────────────────
+
+    private void startListening(HudModule module) {
+        listeningModule = module;
+        ButtonWidget btn = keybindButtons.get(module.getId());
+        if (btn != null) btn.setMessage(Text.literal("> ..."));
+    }
+
+    @Override
+    public boolean keyPressed(KeyInput keyInput) {
+        if (listeningModule != null) {
+            KeyBinding kb = ModuleManager.getKeybind(listeningModule.getId());
+            if (kb != null) {
+                if (keyInput.key() == GLFW.GLFW_KEY_ESCAPE) {
+                    // ESC = unbind
+                    kb.setBoundKey(InputUtil.UNKNOWN_KEY);
+                } else {
+                    kb.setBoundKey(InputUtil.Type.KEYSYM.createFromCode(keyInput.key()));
+                }
+                KeyBinding.updateKeysByCode();
+                // Update button label
+                ButtonWidget btn = keybindButtons.get(listeningModule.getId());
+                if (btn != null) btn.setMessage(keybindLabel(listeningModule));
+            }
+            listeningModule = null;
+            return true;
+        }
+        return super.keyPressed(keyInput);
+    }
+
+    private Text keybindLabel(HudModule module) {
+        KeyBinding kb = ModuleManager.getKeybind(module.getId());
+        if (kb == null || kb.isUnbound()) return Text.literal("[ --- ]");
+        return Text.literal("[").append(kb.getBoundKeyLocalizedText()).append("]");
+    }
+
     // ── rendering ─────────────────────────────────────────────────────────────
+
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        // Panel background + title
         if (panelVisible) {
             context.fill(panelX(), 20, this.width, this.height - 34, 0x88000000);
             context.drawCenteredTextWithShadow(this.textRenderer,
@@ -182,6 +223,7 @@ public class HudEditScreen extends Screen {
         for (HudModule module : ModuleManager.getModules()) {
             ModulePosition pos = ModuleManager.getPosition(module.getId());
             if (!pos.enabled) continue;
+            if (module.getBaseWidth(client) == 0 && module.getBaseHeight() == 0) continue;
 
             float scale = Math.max(0.25f, pos.scale);
             int sw = ModuleManager.scaledWidth(module, pos, client);
@@ -189,23 +231,20 @@ public class HudEditScreen extends Screen {
             boolean hovered = mouseX >= pos.x && mouseX < pos.x + sw
                            && mouseY >= pos.y && mouseY < pos.y + sh;
 
-            // Draw module content with scale
             Matrix3x2fStack matrices = context.getMatrices();
             matrices.pushMatrix();
             matrices.translate(pos.x, pos.y);
             matrices.scale(scale, scale);
-            context.fill(0, 0, module.getBaseWidth(client), module.getBaseHeight(), FILL_EDIT);
+            context.fill(0, 0, module.getBaseWidth(client), module.getBaseHeight(), 0x33FFFFFF);
             module.render(context, client, 0, 0, pos);
             matrices.popMatrix();
 
-            // Outline
             int outlineColor = module == resizing ? OUTLINE_RESIZE
                              : module == dragging  ? OUTLINE_DRAGGING
                              : hovered             ? OUTLINE_HOVER
                              :                       OUTLINE_NORMAL;
             drawOutline(context, pos.x, pos.y, sw, sh, outlineColor);
 
-            // Corner handles only when hovered or resizing
             if (hovered || module == resizing) {
                 drawHandle(context, pos.x,                    pos.y);
                 drawHandle(context, pos.x + sw - HANDLE_SIZE, pos.y);
@@ -213,7 +252,6 @@ public class HudEditScreen extends Screen {
                 drawHandle(context, pos.x + sw - HANDLE_SIZE, pos.y + sh - HANDLE_SIZE);
             }
 
-            // Hint text
             if (hovered && module != dragging && module != resizing) {
                 context.drawTextWithShadow(this.textRenderer,
                     Text.translatable("smartview.gui.hint"),
@@ -221,42 +259,51 @@ public class HudEditScreen extends Screen {
             }
         }
 
+        // Listening overlay
+        if (listeningModule != null) {
+            context.fill(0, 0, this.width, this.height, 0x88000000);
+            String msg = "Press a key for  \"" + listeningModule.getDisplayName()
+                       + "\"  (ESC to unbind)";
+            context.drawCenteredTextWithShadow(this.textRenderer, msg,
+                this.width / 2, this.height / 2, 0xFFFFFFFF);
+        }
+
         super.render(context, mouseX, mouseY, delta);
     }
 
-    // ── input ─────────────────────────────────────────────────────────────────
+    // ── mouse input ───────────────────────────────────────────────────────────
+
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
+    public boolean mouseScrolled(double mx, double my, double h, double v) {
         MinecraftClient client = MinecraftClient.getInstance();
         long window = client.getWindow().getHandle();
-        boolean shiftHeld = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_SHIFT)  == GLFW.GLFW_PRESS
-                         || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS;
-        if (!shiftHeld) return super.mouseScrolled(mouseX, mouseY, horizontal, vertical);
-
+        boolean shift = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_SHIFT)  == GLFW.GLFW_PRESS
+                     || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS;
+        if (!shift) return super.mouseScrolled(mx, my, h, v);
         for (HudModule module : ModuleManager.getModules()) {
             ModulePosition pos = ModuleManager.getPosition(module.getId());
             if (!pos.enabled) continue;
             int sw = ModuleManager.scaledWidth(module, pos, client);
             int sh = ModuleManager.scaledHeight(module, pos);
-            if (mouseX >= pos.x && mouseX < pos.x + sw && mouseY >= pos.y && mouseY < pos.y + sh) {
-                pos.backgroundAlpha = Math.clamp(pos.backgroundAlpha + (int)(vertical * 16), 0, 255);
+            if (mx >= pos.x && mx < pos.x + sw && my >= pos.y && my < pos.y + sh) {
+                pos.backgroundAlpha = Math.clamp(pos.backgroundAlpha + (int)(v * 16), 0, 255);
                 return true;
             }
         }
-        return super.mouseScrolled(mouseX, mouseY, horizontal, vertical);
+        return super.mouseScrolled(mx, my, h, v);
     }
 
     @Override
     public boolean mouseClicked(Click click, boolean doubled) {
+        if (listeningModule != null) { listeningModule = null; return true; }
         if (click.button() != 0) return super.mouseClicked(click, doubled);
-
         MinecraftClient client = MinecraftClient.getInstance();
         for (HudModule module : ModuleManager.getModules()) {
             ModulePosition pos = ModuleManager.getPosition(module.getId());
             if (!pos.enabled) continue;
+            if (module.getBaseWidth(client) == 0 && module.getBaseHeight() == 0) continue;
             int sw = ModuleManager.scaledWidth(module, pos, client);
             int sh = ModuleManager.scaledHeight(module, pos);
-
             if (isOnCorner(click.x(), click.y(), pos.x, pos.y, sw, sh)) {
                 resizing = module;
                 resizeStartMouseX  = click.x();
@@ -277,7 +324,7 @@ public class HudEditScreen extends Screen {
     }
 
     @Override
-    public boolean mouseDragged(Click click, double offsetX, double offsetY) {
+    public boolean mouseDragged(Click click, double ox, double oy) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (resizing != null) {
             ModulePosition pos = ModuleManager.getPosition(resizing.getId());
@@ -293,7 +340,7 @@ public class HudEditScreen extends Screen {
             pos.y = Math.clamp((int) click.y() - dragOffsetY, 0, maxY);
             return true;
         }
-        return super.mouseDragged(click, offsetX, offsetY);
+        return super.mouseDragged(click, ox, oy);
     }
 
     @Override
@@ -303,15 +350,11 @@ public class HudEditScreen extends Screen {
     }
 
     @Override
-    public void close() {
-        ModuleManager.save();
-        MinecraftClient.getInstance().setScreen(null);
-    }
-
+    public void close() { ModuleManager.save(); MinecraftClient.getInstance().setScreen(null); }
     @Override public boolean shouldPause() { return false; }
 
     // ── helpers ───────────────────────────────────────────────────────────────
-    /** Left x-coordinate of the side panel. */
+
     private int panelX() { return this.width - PANEL_WIDTH; }
 
     private List<HudModule> sortedFiltered() {
@@ -342,7 +385,7 @@ public class HudEditScreen extends Screen {
     }
 
     private static void drawHandle(DrawContext ctx, int x, int y) {
-        ctx.fill(x, y, x + HANDLE_SIZE, y + HANDLE_SIZE, HANDLE_COLOR);
+        ctx.fill(x, y, x + HANDLE_SIZE, y + HANDLE_SIZE, 0xFFFFFFFF);
         ctx.fill(x + 1, y + 1, x + HANDLE_SIZE - 1, y + HANDLE_SIZE - 1, 0xFF333333);
     }
 

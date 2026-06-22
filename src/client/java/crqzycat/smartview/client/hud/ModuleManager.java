@@ -1,39 +1,54 @@
 package crqzycat.smartview.client.hud;
 
 import crqzycat.smartview.client.config.SmartViewConfig;
-import crqzycat.smartview.client.modules.ArmorStatusModule;
-import crqzycat.smartview.client.modules.CoordsModule;
-import crqzycat.smartview.client.modules.EffectStatusModule;
-import crqzycat.smartview.client.modules.FpsModule;
-import crqzycat.smartview.client.modules.PingModule;
+import crqzycat.smartview.client.modules.*;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.util.InputUtil;
+import net.minecraft.util.Identifier;
 import org.joml.Matrix3x2fStack;
+import org.lwjgl.glfw.GLFW;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public final class ModuleManager {
 
-    private static final List<HudModule> MODULES = new ArrayList<>();
-    private static final Map<String, HudModule> BY_ID = new LinkedHashMap<>();
+    private static final List<HudModule>            MODULES   = new ArrayList<>();
+    private static final Map<String, HudModule>     BY_ID     = new LinkedHashMap<>();
+    private static final Map<String, KeyBinding>    KEYBINDS  = new LinkedHashMap<>();
     private static SmartViewConfig config;
 
     private ModuleManager() {}
 
     public static void init() {
         config = SmartViewConfig.load();
+
         register(new FpsModule());
         register(new PingModule());
         register(new ArmorStatusModule());
         register(new EffectStatusModule());
         register(new CoordsModule());
+        register(new FullbrightModule());
+
+        KeyBinding.Category category =
+            KeyBinding.Category.create(Identifier.of("smartview", "main"));
 
         for (HudModule module : MODULES) {
+            // Fill in missing config entries
             config.modules.computeIfAbsent(module.getId(), id ->
-                    new ModulePosition(module.getDefaultX(), module.getDefaultY(), module.enabledByDefault()));
+                new ModulePosition(module.getDefaultX(), module.getDefaultY(), module.enabledByDefault()));
+
+            // Register one keybinding per module – unbound by default (UNKNOWN)
+            KeyBinding kb = new KeyBinding(
+                "key.smartview.module." + module.getId(),
+                InputUtil.Type.KEYSYM,
+                GLFW.GLFW_KEY_UNKNOWN,
+                category
+            );
+            KeyBindingHelper.registerKeyBinding(kb);
+            KEYBINDS.put(module.getId(), kb);
         }
         config.save();
     }
@@ -45,10 +60,12 @@ public final class ModuleManager {
         BY_ID.put(module.getId(), module);
     }
 
-    public static List<HudModule> getModules() { return MODULES; }
+    public static List<HudModule> getModules()            { return MODULES; }
+    public static KeyBinding      getKeybind(String id)   { return KEYBINDS.get(id); }
 
     public static ModulePosition getPosition(String id) {
-        return config.modules.computeIfAbsent(id, k -> new ModulePosition(10, 10, true));
+        return config.modules.computeIfAbsent(id, k ->
+            new ModulePosition(10, 10, false));
     }
 
     public static void setEnabled(String id, boolean enabled) {
@@ -57,11 +74,31 @@ public final class ModuleManager {
 
     public static void save() { config.save(); }
 
+    /** Called every client tick – handles keybind toggles and module side-effects. */
+    public static void tick() {
+        for (HudModule module : MODULES) {
+            ModulePosition pos = getPosition(module.getId());
+
+            // Toggle via keybind
+            KeyBinding kb = KEYBINDS.get(module.getId());
+            if (kb != null) {
+                while (kb.wasPressed()) {
+                    pos.enabled = !pos.enabled;
+                }
+            }
+
+            // Notify module of current enabled state (e.g. Fullbright gamma management)
+            module.onTick(pos.enabled);
+        }
+    }
+
     public static void render(DrawContext context) {
         MinecraftClient client = MinecraftClient.getInstance();
         for (HudModule module : MODULES) {
             ModulePosition pos = getPosition(module.getId());
             if (!pos.enabled) continue;
+            // Skip zero-size modules (Fullbright etc.)
+            if (module.getBaseWidth(client) == 0 && module.getBaseHeight() == 0) continue;
 
             float scale = Math.max(0.25f, pos.scale);
             Matrix3x2fStack matrices = context.getMatrices();
@@ -73,10 +110,6 @@ public final class ModuleManager {
         }
     }
 
-    /**
-     * Returns the scaled bounding box of a module in screen coordinates.
-     * Used by the edit screen for hit-testing and outline drawing.
-     */
     public static int scaledWidth(HudModule module, ModulePosition pos, MinecraftClient client) {
         return Math.round(module.getBaseWidth(client) * Math.max(0.25f, pos.scale));
     }

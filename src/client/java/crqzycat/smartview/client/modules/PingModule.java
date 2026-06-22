@@ -49,4 +49,5 @@ public class PingModule implements HudModule {
     private static String sample(MinecraftClient client) {
         return getPing(client) + " ms";
     }
+    @Override public boolean enabledByDefault() { return false; }
 }

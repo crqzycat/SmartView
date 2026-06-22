@@ -23,6 +23,6 @@ public class ModulePosition {
         this.y = y;
         this.enabled = enabled;
         this.scale = 1.0f;
-        this.backgroundAlpha = 128;
+        this.backgroundAlpha = 0;
     }
 }

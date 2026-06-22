@@ -41,4 +41,5 @@ public class CoordsModule implements HudModule {
         context.drawTextWithShadow(client.textRenderer, facing.asString().toUpperCase(),
                 tx, ty + LINE_H * 3, 0xFFFFFFFF);
     }
+    @Override public boolean enabledByDefault() { return false; }
 }

@@ -77,4 +77,5 @@ public class ArmorStatusModule implements HudModule {
         if (frac > 0.3f) return 0xFFFFFF55; // yellow
         return 0xFFFF5555;                   // red
     }
+    @Override public boolean enabledByDefault() { return false; }
 }

@@ -32,4 +32,5 @@ public class FpsModule implements HudModule {
         context.fill(x, y, x + w, y + HEIGHT, bgColor);
         context.drawTextWithShadow(client.textRenderer, text, x + PADDING, y + PADDING, 0xFFFFFFFF);
     }
+    @Override public boolean enabledByDefault() { return false; }
 }

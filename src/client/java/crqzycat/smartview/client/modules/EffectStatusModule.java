@@ -79,4 +79,5 @@ public class EffectStatusModule implements HudModule {
             default -> String.valueOf(n);
         };
     }
+    @Override public boolean enabledByDefault() { return false; }
 }
