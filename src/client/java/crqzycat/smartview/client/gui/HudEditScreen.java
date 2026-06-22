@@ -77,10 +77,11 @@ public class HudEditScreen extends Screen {
                 .build()
         );
 
-        // Panel toggle button – sits on the left edge of the panel
+        // Panel toggle button – right edge of screen when collapsed, left edge of panel when open
+        int toggleX = panelVisible ? (panelX() - TOGGLE_BTN_W) : (this.width - TOGGLE_BTN_W);
         togglePanelBtn = this.addDrawableChild(
             ButtonWidget.builder(Text.literal(panelVisible ? "»" : "«"), btn -> togglePanel())
-                .dimensions(panelX() - TOGGLE_BTN_W, this.height / 2 - TOGGLE_BTN_H / 2,
+                .dimensions(toggleX, this.height / 2 - TOGGLE_BTN_H / 2,
                             TOGGLE_BTN_W, TOGGLE_BTN_H)
                 .build()
         );
@@ -116,16 +117,21 @@ public class HudEditScreen extends Screen {
         buildCheckboxesAt(top);
     }
 
+    private static final int RESET_BTN_W  = 16;
+
     private void buildCheckboxesAt(int startY) {
-        // Remove old checkboxes
         for (CheckboxWidget cb : moduleCheckboxes) this.remove(cb);
         moduleCheckboxes.clear();
 
         List<HudModule> sorted = sortedFiltered();
         int y = startY;
         int px = panelX();
+        MinecraftClient client = MinecraftClient.getInstance();
+
         for (HudModule module : sorted) {
             ModulePosition pos = ModuleManager.getPosition(module.getId());
+
+            // Checkbox (slightly narrower to leave room for reset button)
             CheckboxWidget cb = this.addDrawableChild(
                 CheckboxWidget.builder(Text.literal(module.getDisplayName()), this.textRenderer)
                     .pos(px + 4, y)
@@ -134,6 +140,17 @@ public class HudEditScreen extends Screen {
                     .build()
             );
             moduleCheckboxes.add(cb);
+
+            // Reset button: resets position, scale and background alpha to defaults
+            this.addDrawableChild(
+                ButtonWidget.builder(Text.literal("↺"), btn -> {
+                    pos.x = module.getDefaultX();
+                    pos.y = module.getDefaultY();
+                    pos.scale = 1.0f;
+                    pos.backgroundAlpha = 128;
+                }).dimensions(px + PANEL_WIDTH - RESET_BTN_W - 4, y, RESET_BTN_W, 16).build()
+            );
+
             y += 22;
         }
     }
