@@ -100,7 +100,7 @@ public class HudEditScreen extends Screen {
             // Hint text when hovered
             if (hovered && module != dragging) {
                 context.drawTextWithShadow(this.textRenderer,
-                    "Scroll: Groesse  |  Shift+Scroll: Transparenz",
+                    "Scroll: Größe  |  Shift+Scroll: Transparenz",
                     pos.x, pos.y + sh + 2, 0xFFAAAAAA);
             }
         }
