@@ -14,6 +14,8 @@ public class FpsModule implements HudModule {
     private static final int TEXT_COLOR = 0xFFFFFF;
     private static final int BACKGROUND_COLOR = 0x80000000;
     private static final int PADDING = 3;
+    private static final int WIDTH = 72;
+    private static final int HEIGHT = 16;
 
     @Override
     public String getId() {
@@ -37,18 +39,18 @@ public class FpsModule implements HudModule {
 
     @Override
     public int getWidth() {
-        return 60;
+        return WIDTH;
     }
 
     @Override
     public int getHeight() {
-        return 16;
+        return HEIGHT;
     }
 
     @Override
     public void render(DrawContext context, MinecraftClient client, int x, int y) {
         String text = client.getCurrentFps() + " FPS";
-        context.fill(x, y, x + getWidth(), y + getHeight(), BACKGROUND_COLOR);
-        context.drawText(client.textRenderer, text, x + PADDING, y + PADDING, TEXT_COLOR, true);
+        context.fill(x, y, x + WIDTH, y + HEIGHT, BACKGROUND_COLOR);
+        context.drawTextWithShadow(client.textRenderer, text, x + PADDING, y + PADDING, TEXT_COLOR);
     }
 }

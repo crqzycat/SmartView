@@ -35,7 +35,7 @@ public class HudEditScreen extends Screen {
 
     @Override
     protected void init() {
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Fertig"), button -> this.close())
+        this.addDrawableChild(ButtonWidget.builder(Text.translatable("gui.done"), button -> this.close())
                 .dimensions(this.width / 2 - 50, this.height - 28, 100, 20)
                 .build());
 
@@ -53,7 +53,10 @@ public class HudEditScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        this.renderBackground(context, mouseX, mouseY, delta);
+        // No background/blur call here on purpose: the outer screen wrapper in 1.21.11
+        // already does one blur pass per frame, and calling it again here throws
+        // "Can only blur once per frame". We also don't want a blurred world anyway -
+        // you need a clear view to place HUD modules.
 
         context.drawCenteredTextWithShadow(this.textRenderer,
                 "SmartView - Module ziehen zum Verschieben", this.width / 2, 8, 0xFFFFFF);
