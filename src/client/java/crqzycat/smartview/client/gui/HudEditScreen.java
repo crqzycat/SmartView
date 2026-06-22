@@ -9,8 +9,10 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.CheckboxWidget;
+import net.minecraft.client.util.InputUtil;
 import net.minecraft.text.Text;
 import org.joml.Matrix3x2fStack;
+import org.lwjgl.glfw.GLFW;
 
 /**
  * Edit mode overlay. Controls per hovered module:
@@ -98,7 +100,7 @@ public class HudEditScreen extends Screen {
             // Hint text when hovered
             if (hovered && module != dragging) {
                 context.drawTextWithShadow(this.textRenderer,
-                    "Scroll: Größe  |  Shift+Scroll: Transparenz",
+                    "Scroll: Groesse  |  Shift+Scroll: Transparenz",
                     pos.x, pos.y + sh + 2, 0xFFAAAAAA);
             }
         }
@@ -109,20 +111,20 @@ public class HudEditScreen extends Screen {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
         MinecraftClient client = MinecraftClient.getInstance();
+        long window = client.getWindow().getHandle();
+        boolean shiftHeld = (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS
+                          || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS);
+
         for (HudModule module : ModuleManager.getModules()) {
             ModulePosition pos = ModuleManager.getPosition(module.getId());
             if (!pos.enabled) continue;
             int sw = ModuleManager.scaledWidth(module, pos, client);
             int sh = ModuleManager.scaledHeight(module, pos);
             if (mouseX >= pos.x && mouseX < pos.x + sw && mouseY >= pos.y && mouseY < pos.y + sh) {
-                if (hasShiftDown()) {
-                    // Shift+Scroll → background opacity (step 16, clamped 0–255)
-                    pos.backgroundAlpha = Math.max(0, Math.min(255,
-                        pos.backgroundAlpha + (int)(vertical * 16)));
+                if (shiftHeld) {
+                    pos.backgroundAlpha = Math.clamp(pos.backgroundAlpha + (int)(vertical * 16), 0, 255);
                 } else {
-                    // Scroll → scale (step 0.1, clamped 0.25–4.0)
-                    pos.scale = Math.max(0.25f, Math.min(4.0f,
-                        pos.scale + (float)(vertical * 0.1)));
+                    pos.scale = Math.clamp(pos.scale + (float)(vertical * 0.1), 0.25f, 4.0f);
                 }
                 return true;
             }
