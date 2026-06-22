@@ -22,6 +22,9 @@ public final class ModuleManager {
 
     private ModuleManager() {}
 
+    public static final KeyBinding.Category CATEGORY =
+            KeyBinding.Category.create(Identifier.of("smartview", "main"));
+
     public static void init() {
         config = SmartViewConfig.load();
 
@@ -32,20 +35,15 @@ public final class ModuleManager {
         register(new CoordsModule());
         register(new FullbrightModule());
 
-        KeyBinding.Category category =
-            KeyBinding.Category.create(Identifier.of("smartview", "main"));
-
         for (HudModule module : MODULES) {
-            // Fill in missing config entries
             config.modules.computeIfAbsent(module.getId(), id ->
                 new ModulePosition(module.getDefaultX(), module.getDefaultY(), module.enabledByDefault()));
 
-            // Register one keybinding per module – unbound by default (UNKNOWN)
             KeyBinding kb = new KeyBinding(
                 "key.smartview.module." + module.getId(),
                 InputUtil.Type.KEYSYM,
                 GLFW.GLFW_KEY_UNKNOWN,
-                category
+                CATEGORY
             );
             KeyBindingHelper.registerKeyBinding(kb);
             KEYBINDS.put(module.getId(), kb);

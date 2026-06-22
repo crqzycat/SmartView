@@ -9,19 +9,15 @@ import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
-import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 public class SmartviewClient implements ClientModInitializer {
-
-    private static final KeyBinding.Category CATEGORY =
-            KeyBinding.Category.create(Identifier.of("smartview", "main"));
 
     public static final KeyBinding OPEN_EDIT_SCREEN_KEY = new KeyBinding(
             "key.smartview.open_edit_screen",
             InputUtil.Type.KEYSYM,
             GLFW.GLFW_KEY_RIGHT_SHIFT,
-            CATEGORY
+            ModuleManager.CATEGORY
     );
 
     @Override
