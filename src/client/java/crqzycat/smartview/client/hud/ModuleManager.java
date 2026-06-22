@@ -1,7 +1,11 @@
 package crqzycat.smartview.client.hud;
 
 import crqzycat.smartview.client.config.SmartViewConfig;
+import crqzycat.smartview.client.modules.ArmorStatusModule;
+import crqzycat.smartview.client.modules.CoordsModule;
+import crqzycat.smartview.client.modules.EffectStatusModule;
 import crqzycat.smartview.client.modules.FpsModule;
+import crqzycat.smartview.client.modules.PingModule;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import org.joml.Matrix3x2fStack;
@@ -22,6 +26,10 @@ public final class ModuleManager {
     public static void init() {
         config = SmartViewConfig.load();
         register(new FpsModule());
+        register(new PingModule());
+        register(new ArmorStatusModule());
+        register(new EffectStatusModule());
+        register(new CoordsModule());
 
         for (HudModule module : MODULES) {
             config.modules.computeIfAbsent(module.getId(), id ->
