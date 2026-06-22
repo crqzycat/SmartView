@@ -205,6 +205,7 @@ public class HudEditScreen extends Screen {
                         kb.setBoundKey(InputUtil.Type.KEYSYM.createFromCode(key));
                     }
                     KeyBinding.updateKeysByCode();
+                    MinecraftClient.getInstance().options.write();
                     ButtonWidget btn = keybindButtons.get(listeningModule.getId());
                     if (btn != null) btn.setMessage(keybindLabel(listeningModule));
                 }
