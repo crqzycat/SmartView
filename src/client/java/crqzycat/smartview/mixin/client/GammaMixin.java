@@ -1,52 +1,35 @@
 package crqzycat.smartview.mixin.client;
 
 import crqzycat.smartview.client.hud.ModuleManager;
-import net.minecraft.client.option.SimpleOption;
+import net.minecraft.client.render.LightmapTextureManager;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
-import java.lang.reflect.Field;
-
-@Mixin(SimpleOption.class)
+@Mixin(LightmapTextureManager.class)
 public class GammaMixin {
 
-    @Unique
-    private static Field smartview$keyField = null;
-
-    @Unique
-    private static boolean smartview$keyFieldResolved = false;
-
     /**
-     * Intercepts SimpleOption#getValue().
-     * Only returns 10.0 for the gamma option (key = "options.gamma").
+     * In LightmapTextureManager.update() the gamma value is read from
+     * GameOptions and stored in a local double variable. We intercept that
+     * variable and replace it with 10.0 when Fullbright is active.
+     *
+     * The target INVOKE is the call to SimpleOption.getValue() for gamma
+     * inside update(). ModifyVariable captures the return value as it is
+     * assigned to the local variable – bypassing the SimpleOption validator
+     * entirely and also bypassing Sodium's own lightmap pipeline.
      */
-    @SuppressWarnings("unchecked")
-    @Inject(method = "getValue", at = @At("RETURN"), cancellable = true)
-    private void smartview$interceptGetValue(CallbackInfoReturnable<Object> cir) {
-        if (!ModuleManager.isFullbrightEnabled()) return;
-
-        // Resolve the 'key' field once via reflection
-        if (!smartview$keyFieldResolved) {
-            smartview$keyFieldResolved = true;
-            for (Field f : SimpleOption.class.getDeclaredFields()) {
-                if (f.getType() == String.class) {
-                    f.setAccessible(true);
-                    smartview$keyField = f;
-                    break;
-                }
-            }
-        }
-
-        if (smartview$keyField == null) return;
-
-        try {
-            String key = (String) smartview$keyField.get(this);
-            if ("options.gamma".equals(key)) {
-                cir.setReturnValue(10.0);
-            }
-        } catch (Exception ignored) {}
+    @ModifyVariable(
+        method = "update",
+        at = @At(
+            value = "INVOKE",
+            target = "Lnet/minecraft/client/option/SimpleOption;getValue()Ljava/lang/Object;",
+            ordinal = 0,
+            shift = At.Shift.AFTER
+        ),
+        ordinal = 0
+    )
+    private double smartview$overrideGamma(double original) {
+        return ModuleManager.isFullbrightEnabled() ? 10.0 : original;
     }
 }
