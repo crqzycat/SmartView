@@ -115,4 +115,11 @@ public final class ModuleManager {
     public static int scaledHeight(HudModule module, ModulePosition pos) {
         return Math.round(module.getBaseHeight() * Math.max(0.25f, pos.scale));
     }
+
+    /** Wird vom GammaMixin genutzt um Fullbright live zu erzwingen. */
+    public static boolean isFullbrightEnabled() {
+        if (config == null) return false;
+        ModulePosition pos = config.modules.get("fullbright");
+        return pos != null && pos.enabled;
+    }
 }

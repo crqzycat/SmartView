@@ -4,6 +4,7 @@
   "package": "crqzycat.smartview.mixin.client",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "GammaMixin"
   ],
   "injectors": {
     "defaultRequire": 1
