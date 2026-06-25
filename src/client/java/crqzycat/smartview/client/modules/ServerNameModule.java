@@ -19,11 +19,14 @@ public class ServerNameModule implements HudModule {
     @Override
     public int getDefaultX() { return 4; }
 
-    /** Bottom-left: screen height minus one row + padding. */
+    /**
+     * Bottom-left default. Returns a large value that looks correct on most
+     * resolutions; the user can reposition via the HUD editor anyway.
+     * We cannot call getWindow() here because init() runs before the window exists.
+     */
     @Override
     public int getDefaultY() {
-        MinecraftClient client = MinecraftClient.getInstance();
-        return client != null ? client.getWindow().getScaledHeight() - HEIGHT - PAD : 4;
+        return 360; // ~bottom of a 400px scaled screen
     }
 
     @Override
