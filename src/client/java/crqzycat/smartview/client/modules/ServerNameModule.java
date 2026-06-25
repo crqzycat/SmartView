@@ -26,7 +26,7 @@ public class ServerNameModule implements HudModule {
      */
     @Override
     public int getDefaultY() {
-        return 360; // ~bottom of a 400px scaled screen
+        return 200; // safe default, user can reposition via HUD editor // ~bottom of a 400px scaled screen
     }
 
     @Override
