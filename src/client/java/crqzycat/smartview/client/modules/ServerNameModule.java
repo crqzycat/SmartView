@@ -12,11 +12,19 @@ public class ServerNameModule implements HudModule {
     private static final int HEIGHT = 16;
 
     @Override public String getId()             { return "servername"; }
-    @Override public String getDisplayName()    { return "Server Name"; }
-    @Override public int getDefaultX()          { return 10; }
-    @Override public int getDefaultY()          { return 50; }
+    @Override public String getDisplayName()    { return "Server IP"; }
     @Override public int getBaseHeight()        { return HEIGHT; }
     @Override public boolean enabledByDefault() { return false; }
+
+    @Override
+    public int getDefaultX() { return 4; }
+
+    /** Bottom-left: screen height minus one row + padding. */
+    @Override
+    public int getDefaultY() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        return client != null ? client.getWindow().getScaledHeight() - HEIGHT - PAD : 4;
+    }
 
     @Override
     public int getBaseWidth(MinecraftClient client) {
@@ -32,16 +40,9 @@ public class ServerNameModule implements HudModule {
     }
 
     private static String getLabel(MinecraftClient client) {
-        // Multiplayer: use server name or address
         ServerInfo info = client.getCurrentServerEntry();
-        if (info != null) {
-            String name = info.name;
-            return (name != null && !name.isBlank()) ? name : info.address;
-        }
-        // Singleplayer
-        if (client.isInSingleplayer()) {
-            return "Singleplayer";
-        }
+        if (info != null) return info.address;
+        if (client.isInSingleplayer()) return "Singleplayer";
         return "Unknown";
     }
 }
