@@ -34,6 +34,8 @@ public final class ModuleManager {
         register(new EffectStatusModule());
         register(new CoordsModule());
         register(new FullbrightModule());
+        register(new ServerNameModule());
+        register(new PacketLossModule());
 
         for (HudModule module : MODULES) {
             config.modules.computeIfAbsent(module.getId(), id ->

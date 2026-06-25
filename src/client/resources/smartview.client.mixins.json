@@ -5,7 +5,8 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "GammaMixin",
-    "PingMixin"
+    "PingMixin",
+    "PacketLossMixin"
   ],
   "injectors": {
     "defaultRequire": 1
