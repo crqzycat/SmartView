@@ -44,13 +44,13 @@ public class HudEditScreen extends Screen {
     }
 
     private boolean  panelVisible = true;
-    private SortMode sortMode     = SortMode.AZ;
     private String   searchText   = "";
+    private int      scrollOffset = 0;
+    private int      totalContentHeight = 0;
 
-    // Per-category sort modes
-    private final Map<HudModule.Category, SortMode> categorySortModes = new LinkedHashMap<>();
+    private final Map<HudModule.Category, SortMode>  categorySortModes    = new LinkedHashMap<>();
+    private final Map<HudModule.Category, Boolean>   categoryCollapsed     = new LinkedHashMap<>();
 
-    // Drag / resize state
     private HudModule dragging;
     private int dragOffsetX, dragOffsetY;
     private HudModule resizing;
@@ -58,25 +58,19 @@ public class HudEditScreen extends Screen {
     private float  resizeStartScale;
     private int    resizeStartBaseDim;
 
-    // Keybind listening
     private HudModule listeningModule = null;
-    private final Map<String, ButtonWidget> keybindButtons = new LinkedHashMap<>();
-
-    private ButtonWidget    togglePanelBtn;
-    private TextFieldWidget searchField;
-    private final List<CheckboxWidget> moduleCheckboxes = new ArrayList<>();
-
-    // For per-category sort buttons
+    private final Map<String, ButtonWidget>          keybindButtons        = new LinkedHashMap<>();
     private final Map<HudModule.Category, ButtonWidget> categorySortButtons = new LinkedHashMap<>();
+    private final Map<HudModule.Category, ButtonWidget> collapseButtons     = new LinkedHashMap<>();
+    private final List<CheckboxWidget>               moduleCheckboxes      = new ArrayList<>();
 
-    // Scroll state
-    private int scrollOffset = 0;
-    private int totalContentHeight = 0;
+    private TextFieldWidget searchField;
 
     public HudEditScreen() {
         super(Text.literal("SmartView"));
         for (HudModule.Category cat : HudModule.Category.values()) {
             categorySortModes.put(cat, SortMode.AZ);
+            categoryCollapsed.put(cat, false);
         }
     }
 
@@ -85,6 +79,7 @@ public class HudEditScreen extends Screen {
         moduleCheckboxes.clear();
         keybindButtons.clear();
         categorySortButtons.clear();
+        collapseButtons.clear();
         listeningModule = null;
         scrollOffset = 0;
 
@@ -95,7 +90,7 @@ public class HudEditScreen extends Screen {
         );
 
         int toggleX = panelVisible ? (panelX() - TOGGLE_BTN_W) : (this.width - TOGGLE_BTN_W);
-        togglePanelBtn = this.addDrawableChild(
+        this.addDrawableChild(
             ButtonWidget.builder(Text.literal(panelVisible ? "»" : "«"), btn -> togglePanel())
                 .dimensions(toggleX, this.height / 2 - TOGGLE_BTN_H / 2, TOGGLE_BTN_W, TOGGLE_BTN_H)
                 .build()
@@ -121,95 +116,116 @@ public class HudEditScreen extends Screen {
         buildModuleRows(top);
     }
 
+    private static final int ROW_START_Y = 50;
+
     private void buildModuleRows(int startY) {
+        // Remove old widgets
         for (CheckboxWidget cb : moduleCheckboxes) this.remove(cb);
         moduleCheckboxes.clear();
         for (ButtonWidget btn : keybindButtons.values()) this.remove(btn);
         keybindButtons.clear();
         for (ButtonWidget btn : categorySortButtons.values()) this.remove(btn);
         categorySortButtons.clear();
+        for (ButtonWidget btn : collapseButtons.values()) this.remove(btn);
+        collapseButtons.clear();
 
         int px = panelX();
-        int y  = startY - scrollOffset;
-
-        // Group modules by category, filtering by search
-        Map<HudModule.Category, List<HudModule>> grouped = new LinkedHashMap<>();
-        for (HudModule.Category cat : HudModule.Category.values()) grouped.put(cat, new ArrayList<>());
-
+        int contentY = startY; // tracks logical height for scrolling
         String q = searchText.toLowerCase();
-        for (HudModule m : ModuleManager.getModules()) {
-            if (!q.isEmpty() && !m.getDisplayName().toLowerCase().contains(q)) continue;
-            grouped.get(m.getCategory()).add(m);
-        }
 
-        int contentY = startY;
         for (HudModule.Category cat : HudModule.Category.values()) {
-            List<HudModule> modules = grouped.get(cat);
+            List<HudModule> modules = getModulesForCategory(cat, q);
             if (modules.isEmpty()) continue;
 
-            // Sort modules within category
-            SortMode sm = categorySortModes.get(cat);
-            modules.sort(switch (sm) {
-                case AZ             -> Comparator.comparing(HudModule::getDisplayName);
-                case ZA             -> Comparator.comparing(HudModule::getDisplayName).reversed();
-                case ACTIVE_FIRST   -> Comparator.comparingInt(m -> ModuleManager.getPosition(m.getId()).enabled ? 0 : 1);
-                case INACTIVE_FIRST -> Comparator.comparingInt(m -> ModuleManager.getPosition(m.getId()).enabled ? 1 : 0);
-            });
+            boolean collapsed = categoryCollapsed.getOrDefault(cat, false);
+            int widgetY = contentY - scrollOffset;
 
-            // Category header row: label left, sort button right
-            int headerY = contentY - scrollOffset;
+            // Collapse toggle button (arrow)
             HudModule.Category catFinal = cat;
-            ButtonWidget sortBtn = this.addDrawableChild(
-                ButtonWidget.builder(Text.literal("⇅ " + sm.label), btn -> {
-                    categorySortModes.put(catFinal, categorySortModes.get(catFinal).next());
+            ButtonWidget collapseBtn = this.addDrawableChild(
+                ButtonWidget.builder(Text.literal(collapsed ? "▶" : "▼"), btn -> {
+                    categoryCollapsed.put(catFinal, !categoryCollapsed.get(catFinal));
                     rebuildModuleRows();
-                }).dimensions(px + PANEL_WIDTH - 74, headerY, 70, 12).build()
+                }).dimensions(px + 2, widgetY, 14, 12).build()
             );
-            categorySortButtons.put(cat, sortBtn);
-            contentY += 16; // header height
+            collapseButtons.put(cat, collapseBtn);
 
-            // Module rows
-            for (HudModule module : modules) {
-                ModulePosition pos = ModuleManager.getPosition(module.getId());
-                int rowY = contentY - scrollOffset;
-
-                CheckboxWidget cb = this.addDrawableChild(
-                    CheckboxWidget.builder(Text.literal(module.getDisplayName()), this.textRenderer)
-                        .pos(px + 4, rowY)
-                        .checked(pos.enabled)
-                        .callback((widget, checked) -> pos.enabled = checked)
-                        .build()
+            // Sort button – only when expanded
+            if (!collapsed) {
+                SortMode sm = categorySortModes.get(cat);
+                ButtonWidget sortBtn = this.addDrawableChild(
+                    ButtonWidget.builder(Text.literal("⇅ " + sm.label), btn -> {
+                        categorySortModes.put(catFinal, categorySortModes.get(catFinal).next());
+                        rebuildModuleRows();
+                    }).dimensions(px + PANEL_WIDTH - 74, widgetY, 70, 12).build()
                 );
-                moduleCheckboxes.add(cb);
-
-                ButtonWidget kbBtn = this.addDrawableChild(
-                    ButtonWidget.builder(keybindLabel(module), btn -> startListening(module))
-                        .dimensions(px + PANEL_WIDTH - KB_BTN_W - RESET_BTN_W - 6, rowY, KB_BTN_W, 14)
-                        .build()
-                );
-                keybindButtons.put(module.getId(), kbBtn);
-
-                this.addDrawableChild(
-                    ButtonWidget.builder(Text.literal("↺"), btn -> {
-                        pos.x = module.getDefaultX();
-                        pos.y = module.getDefaultY();
-                        pos.scale = 1.0f;
-                        pos.backgroundAlpha = 0;
-                    }).dimensions(px + PANEL_WIDTH - RESET_BTN_W - 4, rowY, RESET_BTN_W, 14).build()
-                );
-
-                contentY += 20;
+                categorySortButtons.put(cat, sortBtn);
             }
 
-            contentY += 4; // spacing between categories
+            contentY += 16; // header row height
+
+            if (!collapsed) {
+                // Sort modules within this category
+                SortMode sm = categorySortModes.get(cat);
+                modules.sort(switch (sm) {
+                    case AZ             -> Comparator.comparing(HudModule::getDisplayName);
+                    case ZA             -> Comparator.comparing(HudModule::getDisplayName).reversed();
+                    case ACTIVE_FIRST   -> Comparator.comparingInt(m -> ModuleManager.getPosition(m.getId()).enabled ? 0 : 1);
+                    case INACTIVE_FIRST -> Comparator.comparingInt(m -> ModuleManager.getPosition(m.getId()).enabled ? 1 : 0);
+                });
+
+                for (HudModule module : modules) {
+                    ModulePosition pos = ModuleManager.getPosition(module.getId());
+                    int rowY = contentY - scrollOffset;
+
+                    CheckboxWidget cb = this.addDrawableChild(
+                        CheckboxWidget.builder(Text.literal(module.getDisplayName()), this.textRenderer)
+                            .pos(px + 4, rowY)
+                            .checked(pos.enabled)
+                            .callback((widget, checked) -> pos.enabled = checked)
+                            .build()
+                    );
+                    moduleCheckboxes.add(cb);
+
+                    ButtonWidget kbBtn = this.addDrawableChild(
+                        ButtonWidget.builder(keybindLabel(module), btn -> startListening(module))
+                            .dimensions(px + PANEL_WIDTH - KB_BTN_W - RESET_BTN_W - 6, rowY, KB_BTN_W, 14)
+                            .build()
+                    );
+                    keybindButtons.put(module.getId(), kbBtn);
+
+                    this.addDrawableChild(
+                        ButtonWidget.builder(Text.literal("↺"), btn -> {
+                            pos.x = module.getDefaultX();
+                            pos.y = module.getDefaultY();
+                            pos.scale = 1.0f;
+                            pos.backgroundAlpha = 0;
+                        }).dimensions(px + PANEL_WIDTH - RESET_BTN_W - 4, rowY, RESET_BTN_W, 14).build()
+                    );
+
+                    contentY += 20;
+                }
+
+                contentY += 4; // spacing after expanded category
+            }
         }
 
         totalContentHeight = contentY - startY;
     }
 
+    private List<HudModule> getModulesForCategory(HudModule.Category cat, String query) {
+        List<HudModule> list = new ArrayList<>();
+        for (HudModule m : ModuleManager.getModules()) {
+            if (m.getCategory() != cat) continue;
+            if (!query.isEmpty() && !m.getDisplayName().toLowerCase().contains(query)) continue;
+            list.add(m);
+        }
+        return list;
+    }
+
     private void rebuildModuleRows() {
         scrollOffset = 0;
-        buildModuleRows(panelVisible ? 50 : 0);
+        buildModuleRows(ROW_START_Y);
     }
 
     private void togglePanel() {
@@ -267,20 +283,15 @@ public class HudEditScreen extends Screen {
         int px = panelX();
 
         if (panelVisible) {
-            // Panel background
             context.fill(px, 20, this.width, this.height - 34, 0x88000000);
-
-            // Title
             context.drawCenteredTextWithShadow(this.textRenderer,
                 Text.translatable("smartview.gui.edit_title"),
                 px + PANEL_WIDTH / 2, 8, 0xFFFFFFFF);
 
-            // Draw category headers inline with content
-            // (they are positioned in buildModuleRows above, we draw labels here)
             drawCategoryHeaders(context);
         }
 
-        // HUD module overlays
+        // HUD module overlays on screen
         MinecraftClient client = MinecraftClient.getInstance();
         for (HudModule module : ModuleManager.getModules()) {
             ModulePosition pos = ModuleManager.getPosition(module.getId());
@@ -308,10 +319,10 @@ public class HudEditScreen extends Screen {
             drawOutline(context, pos.x, pos.y, sw, sh, outlineColor);
 
             if (hovered || module == resizing) {
-                drawHandle(context, pos.x,                     pos.y);
-                drawHandle(context, pos.x + sw - HANDLE_SIZE,  pos.y);
-                drawHandle(context, pos.x,                     pos.y + sh - HANDLE_SIZE);
-                drawHandle(context, pos.x + sw - HANDLE_SIZE,  pos.y + sh - HANDLE_SIZE);
+                drawHandle(context, pos.x,                    pos.y);
+                drawHandle(context, pos.x + sw - HANDLE_SIZE, pos.y);
+                drawHandle(context, pos.x,                    pos.y + sh - HANDLE_SIZE);
+                drawHandle(context, pos.x + sw - HANDLE_SIZE, pos.y + sh - HANDLE_SIZE);
             }
             if (hovered && module != dragging && module != resizing) {
                 context.drawTextWithShadow(this.textRenderer,
@@ -335,28 +346,28 @@ public class HudEditScreen extends Screen {
 
     private void drawCategoryHeaders(DrawContext context) {
         int px = panelX();
-        int startY = 50; // same as buildModuleRows startY
-        int y = startY - scrollOffset;
-
+        int y = ROW_START_Y - scrollOffset;
         String q = searchText.toLowerCase();
+
         for (HudModule.Category cat : HudModule.Category.values()) {
-            boolean hasModules = ModuleManager.getModules().stream().anyMatch(m ->
-                m.getCategory() == cat &&
-                (q.isEmpty() || m.getDisplayName().toLowerCase().contains(q)));
-            if (!hasModules) continue;
+            List<HudModule> modules = getModulesForCategory(cat, q);
+            if (modules.isEmpty()) continue;
 
-            // Category header background
+            boolean collapsed = categoryCollapsed.getOrDefault(cat, false);
+
+            // Header background full width
             context.fill(px, y, px + PANEL_WIDTH, y + 14, COLOR_CATEGORY_BG);
+
+            // Category label (offset to leave room for the collapse button)
+            String arrow = collapsed ? "▶" : "▼";
             context.drawTextWithShadow(this.textRenderer,
-                Text.literal("▶ " + cat.label),
-                px + 4, y + 3, COLOR_CATEGORY_TEXT);
+                Text.literal(arrow + " " + cat.label),
+                px + 18, y + 3, COLOR_CATEGORY_TEXT);
 
-            // Count modules in this category for height calculation
-            long count = ModuleManager.getModules().stream().filter(m ->
-                m.getCategory() == cat &&
-                (q.isEmpty() || m.getDisplayName().toLowerCase().contains(q))).count();
-
-            y += 16 + (count * 20) + 4;
+            y += 16;
+            if (!collapsed) {
+                y += modules.size() * 20 + 4;
+            }
         }
     }
 
@@ -369,7 +380,6 @@ public class HudEditScreen extends Screen {
         boolean shift = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_SHIFT)  == GLFW.GLFW_PRESS
                      || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS;
 
-        // Shift + scroll = resize HUD module
         if (shift) {
             for (HudModule module : ModuleManager.getModules()) {
                 ModulePosition pos = ModuleManager.getPosition(module.getId());
@@ -383,7 +393,6 @@ public class HudEditScreen extends Screen {
             }
         }
 
-        // Scroll in panel
         if (panelVisible && mx >= panelX()) {
             int maxScroll = Math.max(0, totalContentHeight - (this.height - 80));
             scrollOffset = Math.clamp(scrollOffset - (int)(v * 10), 0, maxScroll);
@@ -394,7 +403,7 @@ public class HudEditScreen extends Screen {
         return super.mouseScrolled(mx, my, h, v);
     }
 
-    // ── mouse drag/click ──────────────────────────────────────────────────────
+    // ── mouse ─────────────────────────────────────────────────────────────────
 
     @Override
     public boolean mouseClicked(Click click, boolean doubled) {
