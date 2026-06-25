@@ -17,6 +17,7 @@ public class FullbrightModule implements HudModule {
     @Override public int getDefaultY()          { return 0; }
     @Override public int getBaseWidth(MinecraftClient c) { return 0; }
     @Override public int getBaseHeight()        { return 0; }
+    @Override public HudModule.Category getCategory() { return HudModule.Category.VISUAL; }
     @Override public boolean enabledByDefault() { return false; }
 
     @Override

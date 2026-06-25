@@ -23,6 +23,7 @@ public class PingModule implements HudModule {
     @Override public int getDefaultX()          { return 10; }
     @Override public int getDefaultY()          { return 30; }
     @Override public int getBaseHeight()        { return HEIGHT; }
+    @Override public HudModule.Category getCategory() { return HudModule.Category.NETWORK; }
     @Override public boolean enabledByDefault() { return false; }
 
     @Override

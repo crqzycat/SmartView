@@ -5,6 +5,16 @@ import net.minecraft.client.gui.DrawContext;
 
 public interface HudModule {
 
+    enum Category {
+        GENERAL("General"),
+        NETWORK("Network"),
+        COMBAT("Combat"),
+        VISUAL("Visual");
+
+        public final String label;
+        Category(String label) { this.label = label; }
+    }
+
     String getId();
     String getDisplayName();
     int getDefaultX();
@@ -12,18 +22,9 @@ public interface HudModule {
     int getBaseWidth(MinecraftClient client);
     int getBaseHeight();
 
-    /** All modules off by default – user enables what they want. */
+    default Category getCategory() { return Category.GENERAL; }
     default boolean enabledByDefault() { return false; }
-
-    /**
-     * Called every client tick. Modules with side-effects (e.g. Fullbright)
-     * use this to apply/remove their effect based on the enabled flag.
-     */
     default void onTick(boolean enabled) {}
 
-    /**
-     * Draw the module. x/y is already at (0,0) – the caller applies the matrix transform.
-     * Only called when the module is enabled.
-     */
     void render(DrawContext context, MinecraftClient client, int x, int y, ModulePosition pos);
 }

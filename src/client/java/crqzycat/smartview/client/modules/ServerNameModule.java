@@ -14,6 +14,7 @@ public class ServerNameModule implements HudModule {
     @Override public String getId()             { return "servername"; }
     @Override public String getDisplayName()    { return "Server IP"; }
     @Override public int getBaseHeight()        { return HEIGHT; }
+    @Override public HudModule.Category getCategory() { return HudModule.Category.NETWORK; }
     @Override public boolean enabledByDefault() { return false; }
 
     @Override
