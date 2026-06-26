@@ -26,6 +26,7 @@ public class HudEditScreen extends Screen {
     private static final int TOGGLE_BTN_W = 18;
     private static final int TOGGLE_BTN_H = 36;
     private static final int RESET_BTN_W  = 16;
+    private static final int COLOR_BTN_W  = 16;
     private static final int KB_BTN_W     = 60;
 
     private static final int OUTLINE_NORMAL   = 0x80FFFFFF;
@@ -61,6 +62,7 @@ public class HudEditScreen extends Screen {
     private HudModule listeningModule = null;
     private final Map<String, ButtonWidget>          keybindButtons        = new LinkedHashMap<>();
     private final Map<String, ButtonWidget>          resetButtons          = new LinkedHashMap<>();
+    private final Map<String, ButtonWidget>          colorButtons          = new LinkedHashMap<>();
     private final Map<HudModule.Category, ButtonWidget> categorySortButtons = new LinkedHashMap<>();
     private final Map<HudModule.Category, ButtonWidget> collapseButtons     = new LinkedHashMap<>();
     private final List<CheckboxWidget>               moduleCheckboxes      = new ArrayList<>();
@@ -131,6 +133,8 @@ public class HudEditScreen extends Screen {
         collapseButtons.clear();
         for (ButtonWidget btn : resetButtons.values()) this.remove(btn);
         resetButtons.clear();
+        for (ButtonWidget btn : colorButtons.values()) this.remove(btn);
+        colorButtons.clear();
 
         int px = panelX();
         int contentY = startY; // tracks logical height for scrolling
@@ -192,10 +196,20 @@ public class HudEditScreen extends Screen {
 
                     ButtonWidget kbBtn = this.addDrawableChild(
                         ButtonWidget.builder(keybindLabel(module), btn -> startListening(module))
-                            .dimensions(px + PANEL_WIDTH - KB_BTN_W - RESET_BTN_W - 6, rowY, KB_BTN_W, 14)
+                            .dimensions(px + PANEL_WIDTH - KB_BTN_W - RESET_BTN_W - COLOR_BTN_W - 8, rowY, KB_BTN_W, 14)
                             .build()
                     );
                     keybindButtons.put(module.getId(), kbBtn);
+
+                    // Color picker button – shows a filled square in the current text color
+                    HudModule moduleFinal = module;
+                    ButtonWidget colorBtn = this.addDrawableChild(
+                        ButtonWidget.builder(Text.literal("■"), btn ->
+                            MinecraftClient.getInstance().setScreen(
+                                new ColorPickerScreen(this, pos, moduleFinal.getDisplayName()))
+                        ).dimensions(px + PANEL_WIDTH - RESET_BTN_W - COLOR_BTN_W - 6, rowY, COLOR_BTN_W, 14).build()
+                    );
+                    colorButtons.put(module.getId(), colorBtn);
 
                     ButtonWidget resetBtn = this.addDrawableChild(
                         ButtonWidget.builder(Text.literal("↺"), btn -> {
@@ -203,6 +217,7 @@ public class HudEditScreen extends Screen {
                             pos.y = module.getDefaultY();
                             pos.scale = 1.0f;
                             pos.backgroundAlpha = 0;
+                            pos.textColor = 0xFFFFFFFF;
                         }).dimensions(px + PANEL_WIDTH - RESET_BTN_W - 4, rowY, RESET_BTN_W, 14).build()
                     );
                     resetButtons.put(module.getId(), resetBtn);

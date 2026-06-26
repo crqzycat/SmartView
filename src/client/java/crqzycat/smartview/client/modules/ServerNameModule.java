@@ -40,7 +40,7 @@ public class ServerNameModule implements HudModule {
         String text = getLabel(client);
         int w = client.textRenderer.getWidth(text) + PAD * 2;
         context.fill(x, y, x + w, y + HEIGHT, pos.backgroundAlpha << 24);
-        context.drawTextWithShadow(client.textRenderer, text, x + PAD, y + PAD, 0xFFFFFFFF);
+        context.drawTextWithShadow(client.textRenderer, text, x + PAD, y + PAD, pos.textColor);
     }
 
     private static String getLabel(MinecraftClient client) {

@@ -1,18 +1,14 @@
 package crqzycat.smartview.client.hud;
 
-/**
- * Saved state for a single module: where it sits on screen and whether it's enabled.
- * Plain data holder, gets (de)serialized by Gson - keep field names stable.
- */
 public class ModulePosition {
 
-    public int x;
-    public int y;
+    public int     x;
+    public int     y;
     public boolean enabled;
-    /** Render scale applied via matrix transform. 1.0 = default size. */
-    public float scale;
-    /** Alpha of the module background (0 = invisible, 255 = fully opaque). */
-    public int backgroundAlpha;
+    public float   scale;
+    public int     backgroundAlpha;
+    /** ARGB text color for this module. Default = opaque white. */
+    public int     textColor = 0xFFFFFFFF;
 
     public ModulePosition() {
         this(0, 0, true);
@@ -24,5 +20,6 @@ public class ModulePosition {
         this.enabled = enabled;
         this.scale = 1.0f;
         this.backgroundAlpha = 0;
+        this.textColor = 0xFFFFFFFF;
     }
 }
