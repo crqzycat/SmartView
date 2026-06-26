@@ -232,6 +232,38 @@ public class HudEditScreen extends Screen {
         }
 
         totalContentHeight = contentY - startY;
+        updateWidgetVisibility();
+    }
+
+    /** Hide widgets that are scrolled outside the visible panel area. */
+    private void updateWidgetVisibility() {
+        int topClip    = ROW_START_Y;
+        int bottomClip = this.height - 34;
+
+        for (CheckboxWidget cb : moduleCheckboxes) {
+            boolean visible = cb.getY() >= topClip && cb.getY() + cb.getHeight() <= bottomClip;
+            cb.visible = visible;
+        }
+        for (ButtonWidget btn : keybindButtons.values()) {
+            boolean visible = btn.getY() >= topClip && btn.getY() + btn.getHeight() <= bottomClip;
+            btn.visible = visible;
+        }
+        for (ButtonWidget btn : resetButtons.values()) {
+            boolean visible = btn.getY() >= topClip && btn.getY() + btn.getHeight() <= bottomClip;
+            btn.visible = visible;
+        }
+        for (ButtonWidget btn : colorButtons.values()) {
+            boolean visible = btn.getY() >= topClip && btn.getY() + btn.getHeight() <= bottomClip;
+            btn.visible = visible;
+        }
+        for (ButtonWidget btn : categorySortButtons.values()) {
+            boolean visible = btn.getY() >= topClip && btn.getY() + btn.getHeight() <= bottomClip;
+            btn.visible = visible;
+        }
+        for (ButtonWidget btn : collapseButtons.values()) {
+            boolean visible = btn.getY() >= topClip && btn.getY() + btn.getHeight() <= bottomClip;
+            btn.visible = visible;
+        }
     }
 
     private List<HudModule> getModulesForCategory(HudModule.Category cat, String query) {
@@ -313,7 +345,10 @@ public class HudEditScreen extends Screen {
                 Text.translatable("smartview.gui.edit_title"),
                 px + PANEL_WIDTH / 2, 8, 0xFFFFFFFF);
 
+            // Clip category headers to the area below the search bar
+            context.enableScissor(px, ROW_START_Y, this.width, this.height - 34);
             drawCategoryHeaders(context);
+            context.disableScissor();
         }
 
         // HUD module overlays on screen
