@@ -60,6 +60,7 @@ public class HudEditScreen extends Screen {
 
     private HudModule listeningModule = null;
     private final Map<String, ButtonWidget>          keybindButtons        = new LinkedHashMap<>();
+    private final Map<String, ButtonWidget>          resetButtons          = new LinkedHashMap<>();
     private final Map<HudModule.Category, ButtonWidget> categorySortButtons = new LinkedHashMap<>();
     private final Map<HudModule.Category, ButtonWidget> collapseButtons     = new LinkedHashMap<>();
     private final List<CheckboxWidget>               moduleCheckboxes      = new ArrayList<>();
@@ -128,6 +129,8 @@ public class HudEditScreen extends Screen {
         categorySortButtons.clear();
         for (ButtonWidget btn : collapseButtons.values()) this.remove(btn);
         collapseButtons.clear();
+        for (ButtonWidget btn : resetButtons.values()) this.remove(btn);
+        resetButtons.clear();
 
         int px = panelX();
         int contentY = startY; // tracks logical height for scrolling
@@ -194,7 +197,7 @@ public class HudEditScreen extends Screen {
                     );
                     keybindButtons.put(module.getId(), kbBtn);
 
-                    this.addDrawableChild(
+                    ButtonWidget resetBtn = this.addDrawableChild(
                         ButtonWidget.builder(Text.literal("↺"), btn -> {
                             pos.x = module.getDefaultX();
                             pos.y = module.getDefaultY();
@@ -202,6 +205,7 @@ public class HudEditScreen extends Screen {
                             pos.backgroundAlpha = 0;
                         }).dimensions(px + PANEL_WIDTH - RESET_BTN_W - 4, rowY, RESET_BTN_W, 14).build()
                     );
+                    resetButtons.put(module.getId(), resetBtn);
 
                     contentY += 20;
                 }
