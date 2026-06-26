@@ -43,7 +43,7 @@ public class MoonPhaseModule implements HudModule {
 
     private static String getLabel(MinecraftClient client) {
         if (client.world == null) return "Moon: ---";
-        int phase = client.world.getMoonPhase();
+        int phase = (int)(client.world.getTimeOfDay() / 24000L % 8L + 8L) % 8;
         return PHASES[phase % PHASES.length];
     }
 }

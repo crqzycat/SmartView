@@ -4,8 +4,6 @@ import crqzycat.smartview.client.hud.HudModule;
 import crqzycat.smartview.client.hud.ModulePosition;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.world.gen.chunk.ChunkGenerator;
-
 import java.util.Random;
 
 public class SlimeChunkModule implements HudModule {
