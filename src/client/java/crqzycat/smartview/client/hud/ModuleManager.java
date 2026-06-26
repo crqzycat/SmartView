@@ -36,6 +36,10 @@ public final class ModuleManager {
         register(new FullbrightModule());
         register(new ServerNameModule());
         register(new PacketLossModule());
+        register(new BiomeModule());
+        register(new LightLevelModule());
+        register(new SlimeChunkModule());
+        register(new MoonPhaseModule());
 
         for (HudModule module : MODULES) {
             config.modules.computeIfAbsent(module.getId(), id ->

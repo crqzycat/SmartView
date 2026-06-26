@@ -9,7 +9,8 @@ public interface HudModule {
         GENERAL("General"),
         NETWORK("Network"),
         COMBAT("Combat"),
-        VISUAL("Visual");
+        VISUAL("Visual"),
+        WORLD("World");
 
         public final String label;
         Category(String label) { this.label = label; }
