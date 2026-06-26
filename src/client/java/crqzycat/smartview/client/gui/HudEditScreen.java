@@ -112,7 +112,7 @@ public class HudEditScreen extends Screen {
         );
         searchField.setMaxLength(64);
         searchField.setText(searchText);
-        searchField.setChangedListener(s -> { searchText = s; rebuildModuleRows(); });
+        searchField.setChangedListener(s -> { searchText = s; rebuildModuleRowsResetScroll(); });
         searchField.setPlaceholder(Text.translatable("smartview.gui.search"));
         top += 22;
 
@@ -245,6 +245,10 @@ public class HudEditScreen extends Screen {
     }
 
     private void rebuildModuleRows() {
+        buildModuleRows(ROW_START_Y);
+    }
+
+    private void rebuildModuleRowsResetScroll() {
         scrollOffset = 0;
         buildModuleRows(ROW_START_Y);
     }
@@ -417,7 +421,7 @@ public class HudEditScreen extends Screen {
         if (panelVisible && mx >= panelX()) {
             int maxScroll = Math.max(0, totalContentHeight - (this.height - 80));
             scrollOffset = Math.clamp(scrollOffset - (int)(v * 10), 0, maxScroll);
-            rebuildModuleRows();
+            buildModuleRows(ROW_START_Y);
             return true;
         }
 
