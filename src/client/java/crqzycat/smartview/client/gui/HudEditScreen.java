@@ -205,10 +205,10 @@ public class HudEditScreen extends Screen {
                     HudModule moduleFinal = module;
                     if (module.getBaseWidth(MinecraftClient.getInstance()) > 0 || module.getBaseHeight() > 0) {
                         ButtonWidget colorBtn = this.addDrawableChild(
-                            ButtonWidget.builder(Text.literal("■"), btn ->
+                            ButtonWidget.builder(Text.literal("■").withColor(pos.textColor), btn -> {
                                 MinecraftClient.getInstance().setScreen(
-                                    new ColorPickerScreen(this, pos, moduleFinal.getDisplayName()))
-                            ).dimensions(px + PANEL_WIDTH - RESET_BTN_W - COLOR_BTN_W - 6, rowY, COLOR_BTN_W, 14).build()
+                                    new ColorPickerScreen(this, pos, moduleFinal.getDisplayName(), this::rebuildModuleRows));
+                            }).dimensions(px + PANEL_WIDTH - RESET_BTN_W - COLOR_BTN_W - 6, rowY, COLOR_BTN_W, 14).build()
                         );
                         colorButtons.put(module.getId(), colorBtn);
                     }

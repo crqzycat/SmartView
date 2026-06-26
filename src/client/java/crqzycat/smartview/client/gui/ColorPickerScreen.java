@@ -16,6 +16,7 @@ public class ColorPickerScreen extends Screen {
     private final Screen parent;
     private final ModulePosition pos;
     private final String moduleName;
+    private final Runnable onClose;
 
     // HSB sliders (0.0 - 1.0)
     private float hue;
@@ -34,11 +35,12 @@ public class ColorPickerScreen extends Screen {
     private static final int SLIDER_H = 12;
     private static final int SLIDER_X_OFF = 60; // label offset
 
-    public ColorPickerScreen(Screen parent, ModulePosition pos, String moduleName) {
+    public ColorPickerScreen(Screen parent, ModulePosition pos, String moduleName, Runnable onClose) {
         super(Text.literal("Color: " + moduleName));
         this.parent = parent;
         this.pos = pos;
         this.moduleName = moduleName;
+        this.onClose = onClose;
 
         // Init HSB from current textColor
         int color = pos.textColor;
@@ -258,6 +260,7 @@ public class ColorPickerScreen extends Screen {
 
     @Override
     public void close() {
+        if (onClose != null) onClose.run();
         MinecraftClient.getInstance().setScreen(parent);
     }
 
