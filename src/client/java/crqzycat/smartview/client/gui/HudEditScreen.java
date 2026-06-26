@@ -418,11 +418,13 @@ public class HudEditScreen extends Screen {
             }
         }
 
-        if (panelVisible && mx >= panelX()) {
+        if (panelVisible) {
             int maxScroll = Math.max(0, totalContentHeight - (this.height - 80));
-            scrollOffset = Math.clamp(scrollOffset - (int)(v * 10), 0, maxScroll);
-            buildModuleRows(ROW_START_Y);
-            return true;
+            if (maxScroll > 0) {
+                scrollOffset = (int) Math.clamp(scrollOffset - v * 12, 0, maxScroll);
+                buildModuleRows(ROW_START_Y);
+                return true;
+            }
         }
 
         return super.mouseScrolled(mx, my, h, v);
