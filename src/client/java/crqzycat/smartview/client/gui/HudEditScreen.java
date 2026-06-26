@@ -201,15 +201,17 @@ public class HudEditScreen extends Screen {
                     );
                     keybindButtons.put(module.getId(), kbBtn);
 
-                    // Color picker button – shows a filled square in the current text color
+                    // Color picker button – only for modules that render text
                     HudModule moduleFinal = module;
-                    ButtonWidget colorBtn = this.addDrawableChild(
-                        ButtonWidget.builder(Text.literal("■"), btn ->
-                            MinecraftClient.getInstance().setScreen(
-                                new ColorPickerScreen(this, pos, moduleFinal.getDisplayName()))
-                        ).dimensions(px + PANEL_WIDTH - RESET_BTN_W - COLOR_BTN_W - 6, rowY, COLOR_BTN_W, 14).build()
-                    );
-                    colorButtons.put(module.getId(), colorBtn);
+                    if (module.getBaseWidth(MinecraftClient.getInstance()) > 0 || module.getBaseHeight() > 0) {
+                        ButtonWidget colorBtn = this.addDrawableChild(
+                            ButtonWidget.builder(Text.literal("■"), btn ->
+                                MinecraftClient.getInstance().setScreen(
+                                    new ColorPickerScreen(this, pos, moduleFinal.getDisplayName()))
+                            ).dimensions(px + PANEL_WIDTH - RESET_BTN_W - COLOR_BTN_W - 6, rowY, COLOR_BTN_W, 14).build()
+                        );
+                        colorButtons.put(module.getId(), colorBtn);
+                    }
 
                     ButtonWidget resetBtn = this.addDrawableChild(
                         ButtonWidget.builder(Text.literal("↺"), btn -> {
