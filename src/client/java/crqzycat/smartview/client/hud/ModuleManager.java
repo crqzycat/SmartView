@@ -40,6 +40,9 @@ public final class ModuleManager {
         register(new LightLevelModule());
         register(new SlimeChunkModule());
         register(new MoonPhaseModule());
+        register(new ClockModule());
+        register(new CompassModule());
+        register(new TargetBlockModule());
 
         for (HudModule module : MODULES) {
             config.modules.computeIfAbsent(module.getId(), id ->
