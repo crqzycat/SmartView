@@ -183,12 +183,11 @@ public class HudEditScreen extends Screen {
         );
         field.setMaxLength(24);
         field.setText(profileName);
-        field.setFocused(true);
         field.setChangedListener(s -> {}); // handled on confirm
-        // Store reference so we can confirm on Enter/Esc
         renamingProfile = profileName;
         renameField = field;
         this.addDrawableChild(field);
+        this.setFocused(field); // route keyboard events to the text field
     }
 
     private String renamingProfile = null;
