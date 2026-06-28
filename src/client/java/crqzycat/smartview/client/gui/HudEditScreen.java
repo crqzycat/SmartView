@@ -127,7 +127,11 @@ public class HudEditScreen extends Screen {
 
     private static final int ROW_START_Y = 70;
 
+    /** profile name → its button x/y/w for right-click detection */
+    private final java.util.Map<String, int[]> profileButtonBounds = new java.util.LinkedHashMap<>();
+
     private void buildProfileBar(int px, int top) {
+        profileButtonBounds.clear();
         java.util.List<String> profiles = new java.util.ArrayList<>(ModuleManager.getProfileNames());
         int btnW = (PANEL_WIDTH - 22) / Math.max(1, profiles.size());
         btnW = Math.min(btnW, 50);
@@ -135,12 +139,14 @@ public class HudEditScreen extends Screen {
         for (int i = 0; i < profiles.size(); i++) {
             String name = profiles.get(i);
             boolean active = name.equals(ModuleManager.getActiveProfile());
+            int bx = px + 2 + i * (btnW + 1);
+            profileButtonBounds.put(name, new int[]{bx, top, btnW, 14});
             this.addDrawableChild(
                 ButtonWidget.builder(Text.literal(active ? "§e" + name : name), btn -> {
                     ModuleManager.switchProfile(name);
                     this.clearChildren();
                     this.init();
-                }).dimensions(px + 2 + i * (btnW + 1), top, btnW, 14).build()
+                }).dimensions(bx, top, btnW, 14).build()
             );
         }
 
@@ -157,7 +163,7 @@ public class HudEditScreen extends Screen {
             );
         }
 
-        // - delete current profile button
+        // ✕ delete current profile button
         this.addDrawableChild(
             ButtonWidget.builder(Text.literal("✕"), btn -> {
                 ModuleManager.deleteProfile(ModuleManager.getActiveProfile());
@@ -165,6 +171,40 @@ public class HudEditScreen extends Screen {
                 this.init();
             }).dimensions(px + PANEL_WIDTH - 16, top, 14, 14).build()
         );
+    }
+
+    /** Opens an inline rename field for a profile. */
+    private void openRenameField(String profileName) {
+        int[] bounds = profileButtonBounds.get(profileName);
+        if (bounds == null) return;
+        TextFieldWidget field = new TextFieldWidget(
+            this.textRenderer, bounds[0], bounds[1], bounds[2], bounds[3],
+            Text.literal("Rename")
+        );
+        field.setMaxLength(24);
+        field.setText(profileName);
+        field.setFocused(true);
+        field.setChangedListener(s -> {}); // handled on confirm
+        // Store reference so we can confirm on Enter/Esc
+        renamingProfile = profileName;
+        renameField = field;
+        this.addDrawableChild(field);
+    }
+
+    private String renamingProfile = null;
+    private TextFieldWidget renameField = null;
+
+    private void confirmRename() {
+        if (renamingProfile != null && renameField != null) {
+            String newName = renameField.getText().trim();
+            if (!newName.isEmpty() && !newName.equals(renamingProfile)) {
+                ModuleManager.renameProfile(renamingProfile, newName);
+            }
+        }
+        renamingProfile = null;
+        renameField = null;
+        this.clearChildren();
+        this.init();
     }
 
     private void buildModuleRows(int startY) {
@@ -353,6 +393,22 @@ public class HudEditScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyInput keyInput) {
+        // Rename field confirm/cancel
+        if (renamingProfile != null) {
+            int key = keyInput.key();
+            if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
+                confirmRename();
+                return true;
+            } else if (key == GLFW.GLFW_KEY_ESCAPE) {
+                renamingProfile = null;
+                renameField = null;
+                this.clearChildren();
+                this.init();
+                return true;
+            }
+            return super.keyPressed(keyInput);
+        }
+
         if (listeningModule != null) {
             int key = keyInput.key();
             if (!BLOCKED_KEYS.contains(key)) {
@@ -439,6 +495,22 @@ public class HudEditScreen extends Screen {
 
         super.render(context, mouseX, mouseY, delta);
 
+        // Rename field confirm/cancel
+        if (renamingProfile != null) {
+            int key = keyInput.key();
+            if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
+                confirmRename();
+                return true;
+            } else if (key == GLFW.GLFW_KEY_ESCAPE) {
+                renamingProfile = null;
+                renameField = null;
+                this.clearChildren();
+                this.init();
+                return true;
+            }
+            return super.keyPressed(keyInput);
+        }
+
         if (listeningModule != null) {
             context.fill(0, 0, this.width, this.height, 0xDD000000);
             context.drawCenteredTextWithShadow(this.textRenderer,
@@ -515,7 +587,35 @@ public class HudEditScreen extends Screen {
 
     @Override
     public boolean mouseClicked(Click click, boolean doubled) {
+        // Rename field confirm/cancel
+        if (renamingProfile != null) {
+            int key = keyInput.key();
+            if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
+                confirmRename();
+                return true;
+            } else if (key == GLFW.GLFW_KEY_ESCAPE) {
+                renamingProfile = null;
+                renameField = null;
+                this.clearChildren();
+                this.init();
+                return true;
+            }
+            return super.keyPressed(keyInput);
+        }
+
         if (listeningModule != null) { listeningModule = null; return true; }
+
+        // Right-click on profile button → open rename field
+        if (click.button() == 1) {
+            for (java.util.Map.Entry<String, int[]> e : profileButtonBounds.entrySet()) {
+                int[] b = e.getValue();
+                if (click.x() >= b[0] && click.x() < b[0]+b[2] && click.y() >= b[1] && click.y() < b[1]+b[3]) {
+                    openRenameField(e.getKey());
+                    return true;
+                }
+            }
+        }
+
         if (click.button() != 0) return super.mouseClicked(click, doubled);
         MinecraftClient client = MinecraftClient.getInstance();
         for (HudModule module : ModuleManager.getModules()) {
