@@ -46,9 +46,11 @@ public final class ModuleManager {
         register(new SaturationModule());
         register(new SpeedModule());
         register(new O2Module());
+        register(new DimensionModule());
+        register(new SprintSneakModule());
 
         for (HudModule module : MODULES) {
-            config.modules.computeIfAbsent(module.getId(), id ->
+            config.modules().computeIfAbsent(module.getId(), id ->
                 new ModulePosition(module.getDefaultX(), module.getDefaultY(), module.enabledByDefault()));
 
             KeyBinding kb = new KeyBinding(
@@ -74,7 +76,7 @@ public final class ModuleManager {
     public static KeyBinding      getKeybind(String id)   { return KEYBINDS.get(id); }
 
     public static ModulePosition getPosition(String id) {
-        return config.modules.computeIfAbsent(id, k ->
+        return config.modules().computeIfAbsent(id, k ->
             new ModulePosition(10, 10, false));
     }
 
@@ -128,10 +130,38 @@ public final class ModuleManager {
         return Math.round(module.getBaseHeight() * Math.max(0.25f, pos.scale));
     }
 
+    // ── Profile management ───────────────────────────────────────────────────
+
+    public static java.util.Set<String> getProfileNames() {
+        return config.profiles.keySet();
+    }
+
+    public static String getActiveProfile() {
+        return config.activeProfile;
+    }
+
+    public static void switchProfile(String name) {
+        config.switchProfile(name);
+        config.save();
+    }
+
+    public static void deleteProfile(String name) {
+        config.deleteProfile(name);
+        config.save();
+    }
+
+    public static void renameProfile(String oldName, String newName) {
+        if (oldName.equals(newName) || config.profiles.containsKey(newName)) return;
+        java.util.Map<String, ModulePosition> data = config.profiles.remove(oldName);
+        if (data != null) config.profiles.put(newName, data);
+        if (config.activeProfile.equals(oldName)) config.activeProfile = newName;
+        config.save();
+    }
+
     /** Wird vom GammaMixin genutzt um Fullbright live zu erzwingen. */
     public static boolean isFullbrightEnabled() {
         if (config == null) return false;
-        ModulePosition pos = config.modules.get("fullbright");
+        ModulePosition pos = config.modules().get("fullbright");
         return pos != null && pos.enabled;
     }
 }

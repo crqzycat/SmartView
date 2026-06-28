@@ -1,5 +1,6 @@
 package crqzycat.smartview.client.gui;
 
+import crqzycat.smartview.client.config.SmartViewConfig;
 import crqzycat.smartview.client.hud.HudModule;
 import crqzycat.smartview.client.hud.ModuleManager;
 import crqzycat.smartview.client.hud.ModulePosition;
@@ -107,6 +108,10 @@ public class HudEditScreen extends Screen {
         int px = panelX();
         int top = 28;
 
+        // Profile bar
+        buildProfileBar(px, top);
+        top += 20;
+
         searchField = this.addDrawableChild(
             new TextFieldWidget(this.textRenderer, px + 4, top, PANEL_WIDTH - 8, 16,
                 Text.translatable("smartview.gui.search"))
@@ -120,7 +125,47 @@ public class HudEditScreen extends Screen {
         buildModuleRows(top);
     }
 
-    private static final int ROW_START_Y = 50;
+    private static final int ROW_START_Y = 70;
+
+    private void buildProfileBar(int px, int top) {
+        java.util.List<String> profiles = new java.util.ArrayList<>(ModuleManager.getProfileNames());
+        int btnW = (PANEL_WIDTH - 22) / Math.max(1, profiles.size());
+        btnW = Math.min(btnW, 50);
+
+        for (int i = 0; i < profiles.size(); i++) {
+            String name = profiles.get(i);
+            boolean active = name.equals(ModuleManager.getActiveProfile());
+            this.addDrawableChild(
+                ButtonWidget.builder(Text.literal(active ? "§e" + name : name), btn -> {
+                    ModuleManager.switchProfile(name);
+                    this.clearChildren();
+                    this.init();
+                }).dimensions(px + 2 + i * (btnW + 1), top, btnW, 14).build()
+            );
+        }
+
+        // + new profile button
+        int usedW = profiles.size() * (btnW + 1) + 2;
+        if (profiles.size() < SmartViewConfig.MAX_PROFILES) {
+            this.addDrawableChild(
+                ButtonWidget.builder(Text.literal("+"), btn -> {
+                    String newName = "Profile " + (profiles.size() + 1);
+                    ModuleManager.switchProfile(newName);
+                    this.clearChildren();
+                    this.init();
+                }).dimensions(px + usedW, top, 14, 14).build()
+            );
+        }
+
+        // - delete current profile button
+        this.addDrawableChild(
+            ButtonWidget.builder(Text.literal("✕"), btn -> {
+                ModuleManager.deleteProfile(ModuleManager.getActiveProfile());
+                this.clearChildren();
+                this.init();
+            }).dimensions(px + PANEL_WIDTH - 16, top, 14, 14).build()
+        );
+    }
 
     private void buildModuleRows(int startY) {
         // Remove old widgets
