@@ -25,14 +25,14 @@ public class SprintSneakModule implements HudModule {
     @Override
     public void render(DrawContext context, MinecraftClient client, int x, int y, ModulePosition pos) {
         if (client.player == null) return;
-        boolean sprinting = client.player.isSprinting();
         boolean sneaking  = client.player.isSneaking();
+        boolean sprinting = client.player.isSprinting() && !sneaking; // sneak takes priority
 
         // Only show when doing something
         if (!sprinting && !sneaking) return;
 
-        String text  = sprinting ? "[SPRINT]" : "[SNEAK]";
-        int    color = sprinting  ? 0xFF55FF55 : 0xFFFFAA00;
+        String text  = sneaking ? "[SNEAK]" : "[SPRINT]";
+        int    color = sneaking ? 0xFFFFAA00 : 0xFF55FF55;
 
         int w = client.textRenderer.getWidth(text) + PAD * 2;
         context.fill(x, y, x + w, y + HEIGHT, pos.backgroundAlpha << 24);

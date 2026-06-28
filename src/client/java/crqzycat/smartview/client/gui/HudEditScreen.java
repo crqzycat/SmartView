@@ -500,7 +500,7 @@ public class HudEditScreen extends Screen {
         }
 
         if (panelVisible) {
-            int maxScroll = Math.max(0, totalContentHeight - (this.height - 80));
+            int maxScroll = Math.max(0, totalContentHeight - (this.height - ROW_START_Y - 34));
             if (maxScroll > 0) {
                 scrollOffset = (int) Math.clamp(scrollOffset - v * 12, 0, maxScroll);
                 buildModuleRows(ROW_START_Y);
