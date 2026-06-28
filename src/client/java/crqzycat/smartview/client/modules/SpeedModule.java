@@ -25,19 +25,14 @@ public class SpeedModule implements HudModule {
 
     @Override
     public void render(DrawContext context, MinecraftClient client, int x, int y, ModulePosition pos) {
-        String text = getLabel(client);
+        if (client.player == null) return;
+        Vec3d vel = client.player.getVelocity();
+        double hSpeed = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
+        double bps = hSpeed * 20.0;
+        if (bps < 0.001) return; // hide when standing still
+        String text = String.format("Speed: %.2f b/s", bps);
         int w = client.textRenderer.getWidth(text) + PAD * 2;
         context.fill(x, y, x + w, y + HEIGHT, pos.backgroundAlpha << 24);
         context.drawTextWithShadow(client.textRenderer, text, x + PAD, y + PAD, pos.textColor);
-    }
-
-    private static String getLabel(MinecraftClient client) {
-        if (client.player == null) return "Speed: ---";
-        Vec3d vel = client.player.getVelocity();
-        // Horizontal speed only (ignore vertical / falling)
-        double hSpeed = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
-        // Convert blocks/tick to blocks/second (* 20)
-        double bps = hSpeed * 20.0;
-        return String.format("Speed: %.2f b/s", bps);
     }
 }
