@@ -21,7 +21,7 @@ public class SaturationModule implements HudModule {
 
     @Override
     public int getBaseWidth(MinecraftClient client) {
-        return client.textRenderer.getWidth(getLabel(client)) + PAD * 2;
+        return client.textRenderer.getWidth("Sat: 20.0") + PAD * 2;
     }
 
     @Override

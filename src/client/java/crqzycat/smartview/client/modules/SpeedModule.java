@@ -20,7 +20,7 @@ public class SpeedModule implements HudModule {
 
     @Override
     public int getBaseWidth(MinecraftClient client) {
-        return client.textRenderer.getWidth(getLabel(client)) + PAD * 2;
+        return client.textRenderer.getWidth("Speed: 10.00 b/s") + PAD * 2;
     }
 
     @Override
