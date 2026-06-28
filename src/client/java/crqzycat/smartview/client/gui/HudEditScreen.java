@@ -408,6 +408,21 @@ public class HudEditScreen extends Screen {
             }
             return super.keyPressed(keyInput);
         }
+        // Rename field confirm/cancel
+        if (renamingProfile != null) {
+            int key = keyInput.key();
+            if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
+                confirmRename();
+                return true;
+            } else if (key == GLFW.GLFW_KEY_ESCAPE) {
+                renamingProfile = null;
+                renameField = null;
+                this.clearChildren();
+                this.init();
+                return true;
+            }
+            return super.keyPressed(keyInput);
+        }
 
         if (listeningModule != null) {
             int key = keyInput.key();
@@ -494,22 +509,6 @@ public class HudEditScreen extends Screen {
         }
 
         super.render(context, mouseX, mouseY, delta);
-
-        // Rename field confirm/cancel
-        if (renamingProfile != null) {
-            int key = keyInput.key();
-            if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
-                confirmRename();
-                return true;
-            } else if (key == GLFW.GLFW_KEY_ESCAPE) {
-                renamingProfile = null;
-                renameField = null;
-                this.clearChildren();
-                this.init();
-                return true;
-            }
-            return super.keyPressed(keyInput);
-        }
 
         if (listeningModule != null) {
             context.fill(0, 0, this.width, this.height, 0xDD000000);
