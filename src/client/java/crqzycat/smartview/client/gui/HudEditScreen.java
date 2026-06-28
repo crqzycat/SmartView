@@ -586,22 +586,6 @@ public class HudEditScreen extends Screen {
 
     @Override
     public boolean mouseClicked(Click click, boolean doubled) {
-        // Rename field confirm/cancel
-        if (renamingProfile != null) {
-            int key = keyInput.key();
-            if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
-                confirmRename();
-                return true;
-            } else if (key == GLFW.GLFW_KEY_ESCAPE) {
-                renamingProfile = null;
-                renameField = null;
-                this.clearChildren();
-                this.init();
-                return true;
-            }
-            return super.keyPressed(keyInput);
-        }
-
         if (listeningModule != null) { listeningModule = null; return true; }
 
         // Right-click on profile button → open rename field
