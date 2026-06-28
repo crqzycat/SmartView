@@ -28,6 +28,9 @@ public class TargetBlockModule implements HudModule {
 
     @Override
     public void render(DrawContext context, MinecraftClient client, int x, int y, ModulePosition pos) {
+        if (client.crosshairTarget == null
+                || client.crosshairTarget.getType() != HitResult.Type.BLOCK
+                || client.world == null) return;
         String text = getLabel(client);
         int w = client.textRenderer.getWidth(text) + PAD * 2;
         context.fill(x, y, x + w, y + HEIGHT, pos.backgroundAlpha << 24);
@@ -38,7 +41,7 @@ public class TargetBlockModule implements HudModule {
         if (client.crosshairTarget == null
                 || client.crosshairTarget.getType() != HitResult.Type.BLOCK
                 || client.world == null) {
-            return "Target: ---";
+            return "";
         }
         BlockHitResult hit = (BlockHitResult) client.crosshairTarget;
         BlockPos pos = hit.getBlockPos();

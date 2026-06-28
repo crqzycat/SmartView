@@ -50,7 +50,8 @@ public class HudEditScreen extends Screen {
     private int      totalContentHeight = 0;
 
     private final Map<HudModule.Category, SortMode>  categorySortModes    = new LinkedHashMap<>();
-    private final Map<HudModule.Category, Boolean>   categoryCollapsed     = new LinkedHashMap<>();
+    /** Persists collapse state across screen opens within the same game session. */
+    private static final Map<HudModule.Category, Boolean> categoryCollapsed = new LinkedHashMap<>();
 
     private HudModule dragging;
     private int dragOffsetX, dragOffsetY;
@@ -73,7 +74,7 @@ public class HudEditScreen extends Screen {
         super(Text.literal("SmartView"));
         for (HudModule.Category cat : HudModule.Category.values()) {
             categorySortModes.put(cat, SortMode.AZ);
-            categoryCollapsed.put(cat, false);
+            categoryCollapsed.putIfAbsent(cat, false);
         }
     }
 
