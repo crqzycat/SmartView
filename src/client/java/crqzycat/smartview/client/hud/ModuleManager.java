@@ -43,6 +43,9 @@ public final class ModuleManager {
         register(new ClockModule());
         register(new CompassModule());
         register(new TargetBlockModule());
+        register(new SaturationModule());
+        register(new SpeedModule());
+        register(new O2Module());
 
         for (HudModule module : MODULES) {
             config.modules.computeIfAbsent(module.getId(), id ->

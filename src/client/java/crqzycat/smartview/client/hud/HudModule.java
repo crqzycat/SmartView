@@ -10,7 +10,8 @@ public interface HudModule {
         NETWORK("Network"),
         COMBAT("Combat"),
         VISUAL("Visual"),
-        WORLD("World");
+        WORLD("World"),
+        PLAYER("Player");
 
         public final String label;
         Category(String label) { this.label = label; }
